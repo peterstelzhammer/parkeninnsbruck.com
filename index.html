@@ -151,9 +151,10 @@ footer button{all:unset;cursor:pointer;color:var(--navy-2);font-weight:600;text-
 .toast{position:fixed;left:12px;right:12px;bottom:12px;z-index:50;max-width:520px;margin:0 auto;background:#fff;border:1px solid var(--line);border-radius:16px;box-shadow:0 12px 40px rgba(22,50,74,.22);padding:16px 16px 14px}
 .toast p{margin:0 0 12px;font-size:15px;color:var(--text)}
 .toast-actions{display:flex;gap:10px;align-items:center}
-.toast .btn{flex:1 1 auto;min-height:44px;font-size:15px}
+.toast .btn{flex:1 1 0;min-height:44px;font-size:14px;padding:0 10px;white-space:nowrap}
 .toast-x{all:unset;cursor:pointer;width:44px;height:44px;display:grid;place-items:center;font-size:26px;color:var(--muted);border-radius:10px}
 .toast-x:hover{background:var(--ice)}
+.toast-copy{all:unset;cursor:pointer;margin-top:10px;font-size:14px;font-weight:600;color:var(--navy-2);text-decoration:underline}
 .toast .toast-ok{margin:10px 0 0;color:var(--ok);font-weight:600;font-size:14px}
 .toast[hidden],.toast-ok[hidden]{display:none}
 [data-lang-show]{display:none}
@@ -333,11 +334,13 @@ footer button{all:unset;cursor:pointer;color:var(--navy-2);font-weight:600;text-
 </footer>
 
 <div class="toast" id="mailtoast" role="status" aria-live="polite" hidden>
-  <p data-i18n="toastTxt">Dein E-Mail-Programm wird geöffnet. Öffnet sich nichts oder ist die Nachricht leer?</p>
+  <p data-i18n="toastTxt">Dein E-Mail-Programm wird geöffnet. Öffnet sich nichts oder ist die Nachricht leer? Direkt öffnen:</p>
   <div class="toast-actions">
-    <button type="button" class="btn btn-primary" id="copymail" data-i18n="toastCopy">Vorlage kopieren</button>
+    <a class="btn btn-primary" id="gmaillink" href="https://mail.google.com/" target="_blank" rel="noopener" data-i18n="toastGmail">In Gmail öffnen</a>
+    <a class="btn btn-ghost" id="outlooklink" href="https://outlook.live.com/" target="_blank" rel="noopener" data-i18n="toastOutlook">In Outlook öffnen</a>
     <button type="button" class="toast-x" id="closetoast" aria-label="Schließen">×</button>
   </div>
+  <button type="button" class="toast-copy" id="copymail" data-i18n="toastCopy">oder Vorlage kopieren</button>
   <p class="toast-ok" id="copyok" hidden data-i18n="toastOk">Kopiert – in eine neue E-Mail an info@parkeninnsbruck.com einfügen.</p>
 </div>
 <script>
@@ -374,7 +377,7 @@ footer button{all:unset;cursor:pointer;color:var(--navy-2);font-weight:600;text-
       q4:"Can I park a motorbike or bicycle?", a4:"Yes. You can use the space for a car, a motorbike or a bicycle – whichever you need.",
       q5:"Is there a charging point or a lockable box?", a5:"No. It is an open parking space, not a lockable garage box. There is no EV charging point, and storing items is not permitted.",
       cH:"Questions? Write to us.", cSub:"We reply personally and quickly.",
-      toastTxt:"Your email app is opening. Nothing happens or the message is empty?", toastCopy:"Copy template", toastOk:"Copied – paste it into a new email to info@parkeninnsbruck.com.",
+      toastTxt:"Your email app is opening. Nothing happens or the message is empty? Open it directly:", toastCopy:"or copy template", toastGmail:"Open in Gmail", toastOutlook:"Open in Outlook", toastOk:"Copied – paste it into a new email to info@parkeninnsbruck.com.",
       imp:"Legal notice", dsg:"Privacy",
       d1:"This website uses no cookies, no tracking and loads no third-party content. The web host stores technically necessary log data (e.g. IP address, time) for secure operation.",
       d2:"If you contact us by email, we process your details solely to handle your enquiry and manage the waiting list (Art. 6(1)(b) GDPR). Data is deleted once no longer needed or on your request.",
@@ -434,6 +437,9 @@ footer button{all:unset;cursor:pointer;color:var(--navy-2);font-weight:600;text-
   document.querySelectorAll("[data-mail]").forEach(function(a){
     a.addEventListener("click", function(){
       lastMail = a;
+      var su = encodeURIComponent(a.getAttribute("data-subject")), bd = encodeURIComponent(a.getAttribute("data-body")), to = "info%40parkeninnsbruck.com";
+      document.getElementById("gmaillink").href = "https://mail.google.com/mail/?view=cm&fs=1&to=" + to + "&su=" + su + "&body=" + bd;
+      document.getElementById("outlooklink").href = "https://outlook.live.com/mail/0/deeplink/compose?to=" + to + "&subject=" + su + "&body=" + bd;
       document.getElementById("copyok").hidden = true;
       toast.hidden = false;
       clearTimeout(hideT); hideT = setTimeout(function(){ toast.hidden = true; }, 15000);
