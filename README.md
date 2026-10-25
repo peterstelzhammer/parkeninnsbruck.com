@@ -10,6 +10,7 @@ Statische Seite ohne Build-Schritt, gehostet auf Cloudflare Pages.
 | `robots.txt` | Erlaubt Suchmaschinen und KI-Crawler, verweist auf die Sitemap |
 | `sitemap.xml` | Sitemap für Google Search Console / Bing Webmaster Tools |
 | `llms.txt` | Kurzbeschreibung des Angebots für KI-Assistenten |
+| `favicon.svg`, `favicon.ico`, `apple-touch-icon.png`, `icon-192.png`, `icon-512.png`, `site.webmanifest` | Favicon und App-Icons |
 
 ## Cloudflare Pages
 
