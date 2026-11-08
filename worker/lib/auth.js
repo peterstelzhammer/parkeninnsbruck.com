@@ -5,6 +5,7 @@ export const SITZUNG_STUNDEN = 24;
 export const CODE_MINUTEN = 10;
 export const MAX_VERSUCHE = 5;
 export const MAX_ANFRAGEN = 5; // Codes pro 15 Minuten
+export const MAX_FALSCH_STUNDE = 10; // falsche Codes insgesamt pro Stunde, danach Sperre
 const COOKIE = "adm";
 const OTP_KEY = "auth/otp.json";
 const enc = new TextEncoder();
