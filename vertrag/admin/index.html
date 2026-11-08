@@ -142,6 +142,8 @@
     <div id="offenGz" class="small" style="overflow-x:auto">Lade …</div>
     <h3 style="margin:18px 0 4px;font-size:16px">Wartet auf den Mieter (Link verschickt, noch nichts eingegangen) <span id="nMieter" class="pill" style="margin-left:6px">0</span></h3>
     <div id="offenMieter" class="small" style="overflow-x:auto">Lade …</div>
+    <div class="btns" style="margin-top:14px"><button class="btn small" id="mailTest" type="button" style="flex:0 0 auto">Benachrichtigung testen</button></div>
+    <p class="small" id="mailTestErg"></p>
   </section>
 
   <section class="card">
@@ -508,6 +510,15 @@ document.addEventListener("click", async (ev) => {
     await fetch("/api/admin/offen?id=" + encodeURIComponent(t.dataset.offendel), { method: "DELETE" });
     offenMieter();
   }
+});
+
+$("mailTest").addEventListener("click", async () => {
+  $("mailTestErg").textContent = "Sende …";
+  try {
+    const r = await fetch("/api/admin/mailtest", { method: "POST" });
+    const j = await r.json();
+    $("mailTestErg").textContent = j.ok ? `Test-Mail an ${j.an} gesendet. Bitte Postfach und Spam prüfen.` : "Fehlgeschlagen: " + j.grund;
+  } catch (e) { $("mailTestErg").textContent = "Fehlgeschlagen: " + e.message; }
 });
 
 plaetze();

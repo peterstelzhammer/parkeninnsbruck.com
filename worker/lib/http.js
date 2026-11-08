@@ -77,10 +77,12 @@ export async function pruefeLimit(env, id) {
   return null;
 }
 
-// Benachrichtigung per Cloudflare Email (optional: Binding MAIL + "benachrichtigung" in VERTRAG_CONFIG)
-export async function benachrichtige(env, betreff, text) {
+// Benachrichtigung per Cloudflare Email (Binding MAIL + "benachrichtigung" in VERTRAG_CONFIG).
+// Liefert { ok, grund } statt still zu scheitern.
+export async function sendeMail(env, betreff, text) {
   const cfg = loadConfig(env);
-  if (!env.MAIL || !cfg.benachrichtigung) return false;
+  if (!cfg.benachrichtigung) return { ok: false, grund: 'VERTRAG_CONFIG fehlt oder ist ungültig bzw. enthält kein Feld "benachrichtigung".' };
+  if (!env.MAIL) return { ok: false, grund: "Das Mail-Binding MAIL ist nicht eingerichtet." };
   try {
     const { EmailMessage } = await import("cloudflare:email");
     const b64 = (s) => btoa(String.fromCharCode(...new TextEncoder().encode(s)));
@@ -98,11 +100,15 @@ export async function benachrichtige(env, betreff, text) {
       body,
     ].join("\r\n");
     await env.MAIL.send(new EmailMessage(cfg.absender, cfg.benachrichtigung, raw));
-    return true;
+    return { ok: true, an: cfg.benachrichtigung };
   } catch (e) {
     console.log("Benachrichtigung fehlgeschlagen:", e?.message || e);
-    return false;
+    return { ok: false, grund: String(e?.message || e) };
   }
+}
+
+export async function benachrichtige(env, betreff, text) {
+  return (await sendeMail(env, betreff, text)).ok;
 }
 
 // Dateiname beginnt mit dem Namen des Mieters: Vorname_Nachname_Mietvertrag_Stellplatz_111_ID[_suffix].pdf
