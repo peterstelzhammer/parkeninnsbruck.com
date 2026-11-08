@@ -11,6 +11,7 @@ export const STANDORTE = {
     // Zutrittsmedium und zuständige Stelle
     medium: { nom: "eine Schlüsselkarte", akk: "die Schlüsselkarte", gen: "der Schlüsselkarte", dat: "der Karte", Nom: "Die Schlüsselkarte" },
     stelle: "die Garagenverwaltung",
+    pfand: 20,
   },
   innrain: {
     label: "Tiefgarage Innrain",
@@ -19,6 +20,7 @@ export const STANDORTE = {
     zusatz: "Es handelt sich um einen Stapelparker; die maximale Fahrzeughöhe beträgt 1,50 m.",
     medium: { nom: "ein Schlüssel", akk: "den Schlüssel", gen: "des Schlüssels", dat: "dem Schlüssel", Nom: "Der Schlüssel" },
     stelle: "die Hausverwaltung",
+    pfand: 100,
   },
 };
 

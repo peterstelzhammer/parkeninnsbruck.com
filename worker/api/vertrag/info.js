@@ -23,6 +23,7 @@ export async function onRequestGet({ request, env }) {
       ["Monatsmiete", euro(k.miete)],
       ["Vertragsgebühr", k.gebuehrMieter ? `${euro(s.gebuehr)} (einmalig, trägt der Mieter)` : "übernimmt der Vermieter"],
       ["Kaution", k.kaution > 0 ? euro(k.kaution) : "keine"],
+      ...(k.pfand > 0 ? [[`Pfand ${STANDORTE[k.standort].medium.akk.replace(/^\S+ /, "")}`, euro(k.pfand)]] : []),
       ...(s.miete.rueckwirkend || s.miete.anteilig ? [["Fällige Miete", `${euro(s.miete.betrag)} (${s.miete.label.replace(/^Miete /, "")})`]] : []),
       ["Jetzt zu überweisen", euro(s.gesamt)],
     ],

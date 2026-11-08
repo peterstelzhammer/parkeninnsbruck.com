@@ -45,9 +45,14 @@ export function pruefeKonditionen(input) {
   } else if (input.kaution !== "nein") {
     e.push("Bitte festlegen, ob eine Kaution verlangt wird.");
   }
+  let pfand = 0;
+  if (input.pfand === "ja") {
+    pfand = Math.round(Number(input.pfandBetrag) * 100) / 100;
+    if (!(pfand > 0 && pfand < 10000)) e.push("Pfandbetrag ungültig.");
+  }
   const email = String(input.email || "").trim();
   if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) e.push("E-Mail-Adresse des Mieters ungültig.");
-  return { fehler: e, k: { standort, platz, miete, beginn, gebuehrMieter, kaution, email } };
+  return { fehler: e, k: { standort, platz, miete, beginn, gebuehrMieter, kaution, pfand, email } };
 }
 
 export async function erstelleToken(konditionen, secret) {

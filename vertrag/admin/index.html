@@ -63,7 +63,19 @@
       </div>
     </div>
 
-    <h2 style="margin-top:22px"><span class="step">4</span>Mieter <span class="hint">(optional)</span></h2>
+    <h2 style="margin-top:22px"><span class="step">4</span>Pfand für <span id="mediumName">die Schlüsselkarte</span></h2>
+    <div class="choice" role="radiogroup">
+      <label class="opt"><input type="radio" name="pfand" value="nein" checked><span>Kein Pfand<small>Standard</small></span></label>
+      <label class="opt"><input type="radio" name="pfand" value="ja"><span>Pfand verlangen<small>sinnvoll, wenn keine Kaution</small></span></label>
+    </div>
+    <div class="row two hidden" id="pfandRow" style="margin-top:12px">
+      <div>
+        <label for="pfandBetrag">Pfandbetrag (EUR)</label>
+        <input type="text" id="pfandBetrag" name="pfandBetrag" inputmode="decimal" autocomplete="off">
+      </div>
+    </div>
+
+    <h2 style="margin-top:22px"><span class="step">5</span>Mieter <span class="hint">(optional)</span></h2>
     <div class="row two">
       <div>
         <label for="vorname">Vorname des Mieters</label>
@@ -75,7 +87,7 @@
       </div>
     </div>
 
-    <h2 style="margin-top:22px"><span class="step">5</span>Zusammenfassung</h2>
+    <h2 style="margin-top:22px"><span class="step">6</span>Zusammenfassung</h2>
     <dl class="sum" id="sum"></dl>
     <div id="fErr" class="err hidden"></div>
     <div class="btns" style="margin-top:16px">
@@ -113,7 +125,9 @@ const f = $("f");
 const eur = (n) => "EUR " + n.toLocaleString("de-AT", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const MONATE = ["Jänner", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
 const datumDE = (iso) => { const [y, m, d] = iso.split("-").map(Number); return `${d}. ${MONATE[m - 1]} ${y}`; };
-let kautionManuell = false;
+let kautionManuell = false, pfandManuell = false;
+const PFAND = { kaiserjaeger: 20, innrain: 100 };
+const MEDIUM = { kaiserjaeger: ["die Schlüsselkarte", "Schlüsselkarte"], innrain: ["den Schlüssel", "Schlüssel"] };
 
 function plaetze() {
   const s = $("standort").value;
@@ -134,6 +148,7 @@ function daten() {
   const d = Object.fromEntries(new FormData(f).entries());
   d.miete = zahl(d.miete);
   if (d.kautionBetrag !== undefined) d.kautionBetrag = zahl(d.kautionBetrag);
+  if (d.pfandBetrag !== undefined) d.pfandBetrag = zahl(d.pfandBetrag);
   return d;
 }
 function rechne() {
@@ -144,6 +159,10 @@ function rechne() {
   $("kautionRow").classList.toggle("hidden", d.kaution !== "ja");
   if (d.kaution === "ja" && !kautionManuell) $("kautionBetrag").value = (miete * 2).toFixed(2).replace(".", ",");
   const kaution = d.kaution === "ja" ? zahl($("kautionBetrag").value) || 0 : 0;
+  $("mediumName").textContent = MEDIUM[d.standort][0];
+  $("pfandRow").classList.toggle("hidden", d.pfand !== "ja");
+  if (!pfandManuell) $("pfandBetrag").value = PFAND[d.standort].toFixed(2).replace(".", ",");
+  const pfand = d.pfand === "ja" ? zahl($("pfandBetrag").value) || 0 : 0;
   // Mieten ab Mietbeginn bis einschließlich laufendem Monat, erster Monat tagesgenau (wie im Vertrag)
   let monate = 1, mieteFaellig = miete, anteilig = false;
   if (d.beginn) {
@@ -159,6 +178,7 @@ function rechne() {
   const posten = [[mLabel, mieteFaellig]];
   if (d.gebuehr === "mieter") posten.push(["Vergebührung", gebuehr]);
   if (kaution) posten.push(["Kaution", kaution]);
+  if (pfand) posten.push(["Pfand", pfand]);
   const gesamt = posten.reduce((s, [, b]) => s + b, 0);
   const offen = (v) => (v ? v : '<span style="color:var(--red)">noch nicht festgelegt</span>');
   $("sum").innerHTML = `
@@ -168,6 +188,7 @@ function rechne() {
     ${mieteFaellig !== miete ? `<dt>Fällige Miete</dt><dd>${eur(mieteFaellig)} <span class="small">${mLabel}</span></dd>` : ""}
     <dt>Vertragsgebühr</dt><dd>${offen(d.gebuehr === "mieter" ? `Mieter (${eur(gebuehr)})` : d.gebuehr === "vermieter" ? `ich trage sie (${eur(gebuehr)})` : "")}</dd>
     <dt>Kaution</dt><dd>${offen(d.kaution === "ja" ? eur(kaution) : d.kaution === "nein" ? "keine" : "")}</dd>
+    <dt>Pfand ${MEDIUM[d.standort][1]}</dt><dd>${pfand ? eur(pfand) : "keines"}</dd>
     <dt>${monate > 1 ? "Jetzt fällig" : "Fällig mit 1. Miete"}</dt><dd class="total">${eur(gesamt)}</dd>`;
 }
 function zeigeFehler(list) {
@@ -191,8 +212,9 @@ async function post(url, body) {
   return r;
 }
 
-$("standort").addEventListener("change", () => { plaetze(); rechne(); });
+$("standort").addEventListener("change", () => { plaetze(); pfandManuell = false; rechne(); });
 $("kautionBetrag").addEventListener("input", () => { kautionManuell = true; rechne(); });
+$("pfandBetrag").addEventListener("input", () => { pfandManuell = true; rechne(); });
 f.addEventListener("input", () => { rechne(); if (!$("fErr").classList.contains("hidden")) zeigeFehler(lokalePruefung(daten())); });
 f.addEventListener("change", rechne);
 
@@ -220,7 +242,8 @@ f.addEventListener("submit", async (ev) => {
   if (e.length) return;
   const gebuehrTxt = d.gebuehr === "mieter" ? "Der MIETER trägt die Vertragsgebühr." : "DU trägst die Vertragsgebühr.";
   const kautionTxt = d.kaution === "ja" ? `Kaution: ${eur(d.kautionBetrag)}.` : "KEINE Kaution.";
-  if (!confirm(`Bitte bestätigen:\n\nMonatsmiete: ${eur(d.miete)}.\n${gebuehrTxt}\n${kautionTxt}\n\nLink jetzt erzeugen?`)) return;
+  const pfandTxt = d.pfand === "ja" ? `Pfand ${MEDIUM[d.standort][1]}: ${eur(d.pfandBetrag)}.` : "Kein Pfand.";
+  if (!confirm(`Bitte bestätigen:\n\nMonatsmiete: ${eur(d.miete)}.\n${gebuehrTxt}\n${kautionTxt}\n${pfandTxt}\n\nLink jetzt erzeugen?`)) return;
   $("erzeugen").disabled = true;
   try {
     const j = await (await post("/api/admin/link", d)).json();

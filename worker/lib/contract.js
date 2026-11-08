@@ -61,6 +61,7 @@ export function summen(k, heute = heuteWien()) {
   const posten = [[miete.label, miete.betrag]];
   if (k.gebuehrMieter) posten.push(["Vergebührung", gebuehr]);
   if (k.kaution > 0) posten.push(["Kaution", k.kaution]);
+  if (k.pfand > 0) posten.push([`Pfand ${STANDORTE[k.standort].medium.akk.replace(/^\S+ /, "")}`, k.pfand]);
   const gesamt = Math.round(posten.reduce((s, [, b]) => s + b, 0) * 100) / 100;
   return { gebuehr, posten, gesamt, miete };
 }
@@ -164,6 +165,15 @@ export function baueVertrag(k, m, cfg, sig = null) {
     );
   }
 
+  if (k.pfand > 0) {
+    h(`Pfand für ${s.medium.akk}`);
+    p(
+      `Für ${s.medium.akk} ist ein Pfand von ${euro(k.pfand)} mit der ersten Monatsmiete zu überweisen. Das Pfand wird nach ` +
+        `Beendigung des Mietverhältnisses und Rückgabe ${s.medium.gen} in funktionsfähigem Zustand binnen 14 Tagen zurückbezahlt. ` +
+        `Bei Verlust oder Beschädigung wird es mit den tatsächlichen Ersatzkosten verrechnet.`
+    );
+  }
+
   h("Zahlung");
   if (posten.length > 1 || miete.rueckwirkend || miete.anteilig) {
     B.push({
@@ -196,15 +206,21 @@ export function baueVertrag(k, m, cfg, sig = null) {
       "im Rückstand ist oder wenn der Mieter den Stellplatz vertragswidrig benutzt."
   );
 
-  h("Wertsicherungsklausel");
+  h("Wertsicherung");
   p(
-    "Es wird ausdrücklich Wertbeständigkeit der Forderung plus Nebenforderung vereinbart. Als Maß zur Berechnung der " +
-      "Wertbeständigkeit dient der von der Statistik Austria monatlich verlautbarte Verbraucherpreisindex 2020 (Basisjahr 2020) " +
-      `oder ein an seine Stelle tretender Index. Als Bezugsgröße für diesen Vertrag dient die für den Monat ${monatJahr(k.beginn)} ` +
-      "verlautbarte Indexzahl. Schwankungen der Indexzahl nach oben oder unten bis ausschließlich 5 % bleiben unberücksichtigt. " +
-      "Dieser Spielraum ist bei jedem Überschreiten nach oben oder unten neu zu berechnen, wobei stets die erste außerhalb des " +
-      "jeweils geltenden Spielraums gelegene Indexzahl die Grundlage sowohl für die Neufestsetzung des Forderungsbetrages als auch " +
-      "für die Berechnung des neuen Spielraums zu bilden hat. Alle Veränderungsraten sind auf eine Dezimalstelle zu berechnen."
+    "Der Mietzins ist wertgesichert; es gilt die Wertsicherung nach § 1 Abs. 2 Mieten-Wertsicherungsgesetz (MieWeG) in " +
+      "sinngemäßer Anwendung. Der Mietzins ändert sich jeweils zum 1. April eines Jahres, erstmals zum 1. April des auf den " +
+      "Mietbeginn folgenden Kalenderjahres, im Ausmaß der durchschnittlichen Veränderung des von der Statistik Austria " +
+      "verlautbarten Verbraucherpreisindex 2020 (oder eines an seine Stelle tretenden Index) im vorangegangenen Kalenderjahr " +
+      "gegenüber dem davorliegenden Kalenderjahr. Übersteigt diese Veränderung 3 %, wird der 3 % übersteigende Teil nur zur " +
+      "Hälfte berücksichtigt. Bei der ersten Anpassung wird die Veränderung nur im Verhältnis der vollen Kalendermonate des " +
+      "Mietverhältnisses im vorangegangenen Kalenderjahr zu zwölf Monaten berücksichtigt. Ein Rückgang des Index führt zu " +
+      "einer entsprechenden Senkung. Der geänderte Betrag wird auf ganze Cent gerundet."
+  );
+  p(
+    "Der Vermieter teilt dem Mieter den geänderten Mietzins schriftlich mit; eine Mitteilung per E-Mail genügt. Der geänderte " +
+      "Betrag ist ab dem 1. April zu zahlen, frühestens jedoch ab dem ersten Zinstermin nach Zugang der Mitteilung. Eine " +
+      "rückwirkende Nachforderung für Zeiträume vor Zugang der Mitteilung ist ausgeschlossen."
   );
 
   h("Benützung des Stellplatzes");
@@ -220,8 +236,9 @@ export function baueVertrag(k, m, cfg, sig = null) {
 
   h("Haftung");
   p(
-    "Die Benützung des Mietgegenstandes sowie der Zufahrtswege erfolgt auf eigene Gefahr. Eine Bewachung oder Verwahrung des " +
-      "eingestellten Fahrzeuges ist nicht Gegenstand des Vertrages. Beschädigungen am Mietobjekt und am Einfahrtsbereich zum " +
+    "Eine Bewachung oder Verwahrung des eingestellten Fahrzeuges ist nicht Gegenstand des Vertrages. Der Vermieter haftet " +
+      "für Sachschäden nur bei Vorsatz oder grober Fahrlässigkeit; für Personenschäden haftet er nach den gesetzlichen " +
+      "Bestimmungen. Beschädigungen am Mietobjekt und am Einfahrtsbereich zum " +
       "Mietobjekt gehen zu Lasten des Mieters, sofern sie vom Mieter oder von ihm zuzurechnenden Personen verursacht wurden."
   );
   p("Der Mieter haftet für Verunreinigungen durch Öl oder Benzin sowie für alle Schäden, die bei der Benutzung des Stellplatzes schuldhaft verursacht werden.");
