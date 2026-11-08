@@ -35,8 +35,8 @@
     </div>
     <div class="row two">
       <div>
-        <label for="miete">Mietzins pro Monat (EUR)</label>
-        <input type="number" id="miete" name="miete" min="1" step="0.01" value="99" inputmode="decimal">
+        <label for="miete">Monatsmiete (EUR) <span class="hint">Vorschlag, frei änderbar</span></label>
+        <input type="text" id="miete" name="miete" value="99,00" inputmode="decimal" autocomplete="off">
       </div>
       <div>
         <label for="beginn">Mietbeginn</label>
@@ -59,7 +59,7 @@
     <div class="row two hidden" id="kautionRow" style="margin-top:12px">
       <div>
         <label for="kautionBetrag">Kautionsbetrag (EUR)</label>
-        <input type="number" id="kautionBetrag" name="kautionBetrag" min="1" step="0.01" inputmode="decimal">
+        <input type="text" id="kautionBetrag" name="kautionBetrag" inputmode="decimal" autocomplete="off">
       </div>
     </div>
 
@@ -124,9 +124,17 @@ function ersterNaechsterMonat() {
   const n = new Date(d.getFullYear(), d.getMonth() + 1, 1);
   return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, "0")}-01`;
 }
+// Beträge mit Komma oder Punkt akzeptieren ("105,50", "1.050,00", "105.5")
+const zahl = (v) => {
+  let t = String(v || "").replace(/[^\d,.-]/g, "");
+  if (t.includes(",")) t = t.replace(/\./g, "").replace(",", ".");
+  return Number(t);
+};
 function daten() {
-  const fd = new FormData(f);
-  return Object.fromEntries(fd.entries());
+  const d = Object.fromEntries(new FormData(f).entries());
+  d.miete = zahl(d.miete);
+  if (d.kautionBetrag !== undefined) d.kautionBetrag = zahl(d.kautionBetrag);
+  return d;
 }
 function rechne() {
   const d = daten();
@@ -134,8 +142,8 @@ function rechne() {
   const gebuehr = Math.round(miete * 36) / 100;
   $("gebuehrBetrag").textContent = eur(gebuehr);
   $("kautionRow").classList.toggle("hidden", d.kaution !== "ja");
-  if (d.kaution === "ja" && !kautionManuell) $("kautionBetrag").value = (miete * 2).toFixed(2);
-  const kaution = d.kaution === "ja" ? Number($("kautionBetrag").value) || 0 : 0;
+  if (d.kaution === "ja" && !kautionManuell) $("kautionBetrag").value = (miete * 2).toFixed(2).replace(".", ",");
+  const kaution = d.kaution === "ja" ? zahl($("kautionBetrag").value) || 0 : 0;
   // Mieten ab Mietbeginn bis einschließlich laufendem Monat, erster Monat tagesgenau (wie im Vertrag)
   let monate = 1, mieteFaellig = miete, anteilig = false;
   if (d.beginn) {
@@ -171,6 +179,7 @@ function lokalePruefung(d) {
   if (!d.gebuehr) e.push("Bitte festlegen, wer die Vertragsgebühr trägt.");
   if (!d.kaution) e.push("Bitte festlegen, ob eine Kaution verlangt wird.");
   if (!d.beginn) e.push("Bitte den Mietbeginn wählen.");
+  if (!(d.miete > 0)) e.push("Bitte eine gültige Monatsmiete eingeben (z. B. 105,50).");
   return e;
 }
 async function post(url, body) {
@@ -210,8 +219,8 @@ f.addEventListener("submit", async (ev) => {
   zeigeFehler(e);
   if (e.length) return;
   const gebuehrTxt = d.gebuehr === "mieter" ? "Der MIETER trägt die Vertragsgebühr." : "DU trägst die Vertragsgebühr.";
-  const kautionTxt = d.kaution === "ja" ? `Kaution: ${eur(Number(d.kautionBetrag))}.` : "KEINE Kaution.";
-  if (!confirm(`Bitte bestätigen:\n\n${gebuehrTxt}\n${kautionTxt}\n\nLink jetzt erzeugen?`)) return;
+  const kautionTxt = d.kaution === "ja" ? `Kaution: ${eur(d.kautionBetrag)}.` : "KEINE Kaution.";
+  if (!confirm(`Bitte bestätigen:\n\nMonatsmiete: ${eur(d.miete)}.\n${gebuehrTxt}\n${kautionTxt}\n\nLink jetzt erzeugen?`)) return;
   $("erzeugen").disabled = true;
   try {
     const j = await (await post("/api/admin/link", d)).json();
