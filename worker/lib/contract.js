@@ -128,6 +128,9 @@ export function baueVertrag(k, m, cfg, sig = null) {
   p(mm.kennzeichen.length > 1 ? "Kennzeichen der abgestellten Fahrzeuge: " : "Kennzeichen des abgestellten Fahrzeuges: ", b(kz));
   p("Ein Wechsel des Fahrzeuges ist dem Vermieter unverzüglich bekanntzugeben.");
 
+  h("Mietzeit");
+  p(`Das Mietverhältnis beginnt am ${datumLang(k.beginn)}.`);
+
   h("Mietzins");
   p(
     "Der monatliche Mietzins beträgt ",
@@ -192,9 +195,6 @@ export function baueVertrag(k, m, cfg, sig = null) {
     intro: "Die Zahlungen sind auf das folgende Konto zu überweisen:",
     rows: [["Kontoinhaber", cfg.konto.inhaber], ["Kreditinstitut", cfg.konto.bank], ["IBAN", cfg.konto.iban], ["BIC", cfg.konto.bic]],
   });
-
-  h("Mietzeit");
-  p(`Das Mietverhältnis beginnt am ${datumLang(k.beginn)}.`);
 
   h("Kündigung des Mietverhältnisses");
   p(
