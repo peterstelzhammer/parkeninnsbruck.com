@@ -9,7 +9,6 @@ const GREY = rgb(0.34, 0.41, 0.48);
 const BLACK = rgb(0.08, 0.13, 0.17);
 const ICE = rgb(0.933, 0.957, 0.973);
 const LINE = rgb(0.84, 0.886, 0.918);
-const RED = rgb(0.784, 0.063, 0.18);
 
 // Rechteck mit abgerundeten Ecken als SVG-Pfad (Ursprung oben links, y nach unten)
 const rr = (w, h, r) =>
@@ -169,7 +168,7 @@ export async function renderePdf(blocks, { id, titel = "Mietvertrag Stellplatz" 
       const istPara = nr === "§";
       if (istPara) {
         const num = `§ ${rest.shift()}`;
-        page.drawText(num, { x: M.l, y: y - 11.5, size: 11.5, font: FB, color: RED });
+        page.drawText(num, { x: M.l, y: y - 11.5, size: 11.5, font: FB, color: NAVY });
         page.drawText(rest.join(" "), { x: M.l + 30, y: y - 11.5, size: 11.5, font: FB, color: NAVY });
       } else {
         page.drawText(clean(blk.text), { x: M.l, y: y - 11.5, size: 11.5, font: FB, color: NAVY });
@@ -187,22 +186,23 @@ export async function renderePdf(blocks, { id, titel = "Mietvertrag Stellplatz" 
       felder(blk.rows, M.l + pad, W - 2 * pad, y - pad + 2, true, 92);
       y -= hInhalt + 2 * pad + 2;
     } else if (blk.t === "pay") {
-      const lh = 16;
-      const breite = 280;
-      const h = 22 + (blk.rows.length + 1) * lh + 10;
+      const lh = 14;
+      const breite = W - 12;
+      const labelBreite = breite - 110;
+      const zeilen = blk.rows.map(([k]) => umbrechen([{ text: k }], 10, labelBreite));
+      const h = 36 + zeilen.reduce((s, z) => s + z.length * lh + 3, 0) + lh + 10;
       platz(h);
-      absatz([{ text: blk.intro }], { nach: 2 });
-      const x0 = M.l;
-      for (const [k, v] of blk.rows) {
-        page.drawText(clean(k), { x: x0 + 12, y: y - 11, size: 10, font: F, color: BLACK });
-        page.drawText(clean(v), { x: x0 + breite - F.widthOfTextAtSize(clean(v), 10), y: y - 11, size: 10, font: F, color: BLACK });
-        y -= lh;
-      }
-      box(x0, y - 1, breite + 12, lh + 2, { fill: ICE, r: 5 });
+      absatz([{ text: blk.intro }], { nach: 4 });
+      blk.rows.forEach(([, v], i) => {
+        zeilen[i].forEach((z, j) => zeichneZeile(z, M.l + 12, y - 10 - j * lh, 10));
+        page.drawText(clean(v), { x: M.l + breite - F.widthOfTextAtSize(clean(v), 10), y: y - 10, size: 10, font: F, color: BLACK });
+        y -= zeilen[i].length * lh + 3;
+      });
+      box(M.l, y - 1, breite + 12, lh + 4, { fill: ICE, r: 5 });
       const [tk, tv] = blk.total;
-      page.drawText(clean(tk), { x: x0 + 12, y: y - 12, size: 10.5, font: FB, color: NAVY });
-      page.drawText(clean(tv), { x: x0 + breite - FB.widthOfTextAtSize(clean(tv), 10.5), y: y - 12, size: 10.5, font: FB, color: NAVY });
-      y -= lh + 12;
+      page.drawText(clean(tk), { x: M.l + 12, y: y - 12, size: 10.5, font: FB, color: NAVY });
+      page.drawText(clean(tv), { x: M.l + breite - FB.widthOfTextAtSize(clean(tv), 10.5), y: y - 12, size: 10.5, font: FB, color: NAVY });
+      y -= lh + 16;
     } else if (blk.t === "parties") {
       const gap = 14;
       const pad = 12;

@@ -23,7 +23,8 @@ export async function onRequestGet({ request, env }) {
       ["Monatsmiete", euro(k.miete)],
       ["Vertragsgebühr", k.gebuehrMieter ? `${euro(s.gebuehr)} (einmalig, trägt der Mieter)` : "übernimmt der Vermieter"],
       ["Kaution", k.kaution > 0 ? euro(k.kaution) : "keine"],
-      ["Mit der ersten Miete fällig", euro(s.gesamt)],
+      ...(s.miete.rueckwirkend || s.miete.anteilig ? [["Fällige Miete", `${euro(s.miete.betrag)} (${s.miete.label.replace(/^Miete /, "")})`]] : []),
+      ["Jetzt zu überweisen", euro(s.gesamt)],
     ],
     vertrag: baueVertrag(k, null, loadConfig(env)),
   });

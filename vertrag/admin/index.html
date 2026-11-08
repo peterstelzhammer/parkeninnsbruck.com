@@ -107,7 +107,8 @@ const LABEL = { kaiserjaeger: "Kaiserjägergarage", innrain: "Tiefgarage Innrain
 const $ = (id) => document.getElementById(id);
 const f = $("f");
 const eur = (n) => "EUR " + n.toLocaleString("de-AT", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const datumDE = (iso) => { const [y, m, d] = iso.split("-"); return `${+d}.${+m}.${y}`; };
+const MONATE = ["Jänner", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
+const datumDE = (iso) => { const [y, m, d] = iso.split("-").map(Number); return `${d}. ${MONATE[m - 1]} ${y}`; };
 let kautionManuell = false;
 
 function plaetze() {
@@ -131,7 +132,19 @@ function rechne() {
   $("kautionRow").classList.toggle("hidden", d.kaution !== "ja");
   if (d.kaution === "ja" && !kautionManuell) $("kautionBetrag").value = (miete * 2).toFixed(2);
   const kaution = d.kaution === "ja" ? Number($("kautionBetrag").value) || 0 : 0;
-  const posten = [["Erste Monatsmiete", miete]];
+  // Mieten ab Mietbeginn bis einschließlich laufendem Monat, erster Monat tagesgenau (wie im Vertrag)
+  let monate = 1, mieteFaellig = miete, anteilig = false;
+  if (d.beginn) {
+    const [by, bm, bd] = d.beginn.split("-").map(Number);
+    const h = new Date();
+    monate = Math.max(1, h.getFullYear() * 12 + h.getMonth() - (by * 12 + bm - 1) + 1);
+    const tim = new Date(by, bm, 0).getDate();
+    anteilig = bd > 1;
+    const erster = anteilig ? Math.round((miete * (tim - bd + 1) / tim) * 100) / 100 : miete;
+    mieteFaellig = Math.round((erster + miete * (monate - 1)) * 100) / 100;
+  }
+  const mLabel = monate > 1 ? `Miete (${monate} Monate${anteilig ? ", erster anteilig" : ""})` : anteilig ? "Erste Miete (anteilig)" : "Erste Monatsmiete";
+  const posten = [[mLabel, mieteFaellig]];
   if (d.gebuehr === "mieter") posten.push(["Vergebührung", gebuehr]);
   if (kaution) posten.push(["Kaution", kaution]);
   const gesamt = posten.reduce((s, [, b]) => s + b, 0);
@@ -140,9 +153,10 @@ function rechne() {
     <dt>Stellplatz</dt><dd>${LABEL[d.standort]}, Nr. ${d.platz || "–"}</dd>
     <dt>Mietbeginn</dt><dd>${d.beginn ? datumDE(d.beginn) : "–"}</dd>
     <dt>Monatsmiete</dt><dd>${eur(miete)}</dd>
+    ${mieteFaellig !== miete ? `<dt>Fällige Miete</dt><dd>${eur(mieteFaellig)} <span class="small">${mLabel}</span></dd>` : ""}
     <dt>Vertragsgebühr</dt><dd>${offen(d.gebuehr === "mieter" ? `Mieter (${eur(gebuehr)})` : d.gebuehr === "vermieter" ? `ich trage sie (${eur(gebuehr)})` : "")}</dd>
     <dt>Kaution</dt><dd>${offen(d.kaution === "ja" ? eur(kaution) : d.kaution === "nein" ? "keine" : "")}</dd>
-    <dt>Fällig mit 1. Miete</dt><dd class="total">${eur(gesamt)}</dd>`;
+    <dt>${monate > 1 ? "Jetzt fällig" : "Fällig mit 1. Miete"}</dt><dd class="total">${eur(gesamt)}</dd>`;
 }
 function zeigeFehler(list) {
   $("fErr").innerHTML = list.map((e) => `<div>${e}</div>`).join("");
@@ -205,7 +219,7 @@ f.addEventListener("submit", async (ev) => {
     const text =
       `Hallo,\n\nhier ist der Link zu deinem Mietvertrag für den Stellplatz Nr. ${d.platz} (${LABEL[d.standort]}), Mietbeginn ${datumDE(d.beginn)}:\n\n${j.url}\n\n` +
       `Trag dort deine Daten ein und unterschreib den Vertrag – online, ausgedruckt oder mit ID Austria. Der Link ist bis ${bis} gültig.\n\n` +
-      `Mit der ersten Monatsmiete sind ${eur(j.summen.gesamt)} fällig (${posten}). Die Bankverbindung steht im Vertrag.\n\n` +
+      `${j.summen.miete.rueckwirkend ? "Bei Vertragsabschluss" : "Mit der ersten Miete"} sind ${eur(j.summen.gesamt)} fällig (${posten}). Die Bankverbindung steht im Vertrag.\n\n` +
       `Beste Grüße\nPeter Stelzhammer\nparkeninnsbruck.com`;
     const to = encodeURIComponent(d.email || "");
     $("gmail").href = `https://mail.google.com/mail/?view=cm&fs=1&to=${to}&su=${encodeURIComponent(betreff)}&body=${encodeURIComponent(text)}`;

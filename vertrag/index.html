@@ -110,7 +110,8 @@
 const $ = (id) => document.getElementById(id);
 const T = new URLSearchParams(location.search).get("t");
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-const datumDE = (iso) => { const [y, m, d] = iso.split("-"); return `${+d}.${+m}.${y}`; };
+const MONATE = ["Jänner", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
+const datumDE = (iso) => { const [y, m, d] = iso.split("-").map(Number); return `${d}. ${MONATE[m - 1]} ${y}`; };
 let info = null;
 
 function renderVertrag(blocks) {

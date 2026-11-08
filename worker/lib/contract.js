@@ -22,13 +22,47 @@ export function vertragsgebuehr(miete) {
   return Math.round(miete * 36) / 100;
 }
 
-export function summen(k) {
+// Heutiges Datum in Wien als ISO (JJJJ-MM-TT)
+export function heuteWien() {
+  return new Date().toLocaleDateString("sv-SE", { timeZone: "Europe/Vienna" });
+}
+
+// Bei Vertragsabschluss fällige Mieten: ab Mietbeginn bis einschließlich laufendem Monat
+// (Miete ist im Voraus fällig). Liegt der Beginn in der Zukunft, ist es die erste Monatsmiete.
+export function faelligeMiete(k, heute = heuteWien()) {
+  const [by, bm, bd] = k.beginn.split("-").map(Number);
+  const [hy, hm] = heute.split("-").map(Number);
+  const start = by * 12 + (bm - 1);
+  const jetzt = hy * 12 + (hm - 1);
+  const monate = Math.max(1, jetzt - start + 1);
+  const ende = start + monate - 1;
+  // Erster Monat tagesgenau, wenn der Mietbeginn nicht der Monatserste ist
+  const tageImMonat = new Date(Date.UTC(by, bm, 0)).getUTCDate();
+  const tage = tageImMonat - bd + 1;
+  const anteilig = bd > 1;
+  const ersterMonat = anteilig ? Math.round(((k.miete * tage) / tageImMonat) * 100) / 100 : k.miete;
+  const betrag = Math.round((ersterMonat + k.miete * (monate - 1)) * 100) / 100;
+  const name = (i) => MONATE[i % 12];
+  const jahr = (i) => Math.floor(i / 12);
+  let label;
+  if (monate === 1) label = `Miete ${name(start)} ${jahr(start)}`;
+  else if (jahr(start) === jahr(ende)) label = `Miete ${name(start)} bis ${name(ende)} ${jahr(ende)}`;
+  else label = `Miete ${name(start)} ${jahr(start)} bis ${name(ende)} ${jahr(ende)}`;
+  const zusatz = [];
+  if (monate > 1) zusatz.push(`${monate} Monate`);
+  if (anteilig) zusatz.push(`${name(start)} anteilig ab ${bd}., ${tage} von ${tageImMonat} Tagen`);
+  if (zusatz.length) label += ` (${zusatz.join("; ")})`;
+  return { monate, betrag, label, rueckwirkend: monate > 1, anteilig, ersterMonat };
+}
+
+export function summen(k, heute = heuteWien()) {
   const gebuehr = vertragsgebuehr(k.miete);
-  const posten = [["erste Monatsmiete", k.miete]];
+  const miete = faelligeMiete(k, heute);
+  const posten = [[miete.label, miete.betrag]];
   if (k.gebuehrMieter) posten.push(["Vergebührung", gebuehr]);
   if (k.kaution > 0) posten.push(["Kaution", k.kaution]);
   const gesamt = Math.round(posten.reduce((s, [, b]) => s + b, 0) * 100) / 100;
-  return { gebuehr, posten, gesamt };
+  return { gebuehr, posten, gesamt, miete };
 }
 
 const LEER = "";
@@ -65,7 +99,7 @@ export function baueVertrag(k, m, cfg, sig = null) {
   const s = STANDORTE[k.standort];
   const v = cfg.vermieter;
   const mm = m || { name: LEER, strasse: LEER, plzOrt: LEER, staat: LEER, telefon: LEER, email: LEER, kennzeichen: [], ort: LEER };
-  const { gebuehr, posten, gesamt } = summen(k);
+  const { gebuehr, posten, gesamt, miete } = summen(k);
   const B = [];
   const p = (...runs) => B.push({ t: "p", runs: runs.map((r) => (typeof r === "string" ? { text: r } : r)) });
   const b = (text) => ({ text, b: true });
@@ -131,11 +165,15 @@ export function baueVertrag(k, m, cfg, sig = null) {
   }
 
   h("Zahlung");
-  if (posten.length > 1) {
+  if (posten.length > 1 || miete.rueckwirkend || miete.anteilig) {
     B.push({
       t: "pay",
-      intro: "Mit der ersten Monatsmiete sind zu überweisen:",
-      rows: posten.map(([n, betrag]) => [n.charAt(0).toUpperCase() + n.slice(1), euro(betrag)]),
+      intro: miete.rueckwirkend
+        ? "Da das Mietverhältnis bereits begonnen hat, sind bei Vertragsabschluss die Mieten ab Mietbeginn bis einschließlich des laufenden Monats fällig" + (miete.anteilig ? "; der erste Monat wird tagesgenau berechnet" : "") + ". Zu überweisen sind:"
+        : miete.anteilig
+          ? "Die Miete für den ersten Monat wird tagesgenau ab Mietbeginn berechnet. Zu überweisen sind:"
+          : "Mit der ersten Monatsmiete sind zu überweisen:",
+      rows: posten.map(([n, betrag]) => [n, euro(betrag)]),
       total: ["Gesamt", euro(gesamt)],
     });
   }
