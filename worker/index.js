@@ -5,6 +5,10 @@ import * as link from "./api/admin/link.js";
 import * as vorschau from "./api/admin/vorschau.js";
 import * as liste from "./api/admin/liste.js";
 import * as datei from "./api/admin/datei.js";
+import * as gegenzeichnen from "./api/admin/gegenzeichnen.js";
+import * as gegenzeichnungUpload from "./api/admin/gegenzeichnung-upload.js";
+import * as gzLink from "./api/admin/gz-link.js";
+import * as gegenzeichnung from "./api/vertrag/gegenzeichnung.js";
 import * as info from "./api/vertrag/info.js";
 import * as pdf from "./api/vertrag/pdf.js";
 import * as signieren from "./api/vertrag/signieren.js";
@@ -15,6 +19,10 @@ const ROUTEN = {
   "/api/admin/vorschau": vorschau,
   "/api/admin/liste": liste,
   "/api/admin/datei": datei,
+  "/api/admin/gegenzeichnen": gegenzeichnen,
+  "/api/admin/gegenzeichnung-upload": gegenzeichnungUpload,
+  "/api/admin/gz-link": gzLink,
+  "/api/vertrag/gegenzeichnung": gegenzeichnung,
   "/api/vertrag/info": info,
   "/api/vertrag/pdf": pdf,
   "/api/vertrag/signieren": signieren,

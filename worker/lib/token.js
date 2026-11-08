@@ -64,7 +64,7 @@ export async function erstelleToken(konditionen, secret) {
   return { token: `${body}.${b64url(sig)}`, payload };
 }
 
-export async function pruefeToken(token, secret) {
+export async function pruefeToken(token, secret, typ = null) {
   if (typeof token !== "string" || !token.includes(".")) return { ok: false, grund: "Ungültiger Link." };
   const [body, sig] = token.split(".");
   let gueltig = false;
@@ -76,8 +76,17 @@ export async function pruefeToken(token, secret) {
   }
   if (!gueltig) return { ok: false, grund: "Ungültiger Link." };
   const payload = JSON.parse(new TextDecoder().decode(unb64url(body)));
+  if ((payload.typ || null) !== typ) return { ok: false, grund: "Ungültiger Link." };
   if (payload.exp < Math.floor(Date.now() / 1000)) {
     return { ok: false, grund: "Dieser Link ist abgelaufen. Bitte fordere einen neuen an: info@parkeninnsbruck.com" };
   }
   return { ok: true, payload };
+}
+
+// Link zum Herunterladen der gegengezeichneten Ausfertigung (Typ "gz")
+export async function erstelleDownloadToken(key, secret, tage = 180) {
+  const exp = Math.floor(Date.now() / 1000) + tage * 86400;
+  const body = b64url(enc.encode(JSON.stringify({ v: 1, typ: "gz", key, exp })));
+  const sig = new Uint8Array(await crypto.subtle.sign("HMAC", await hmacKey(secret), enc.encode(body)));
+  return { token: `${body}.${b64url(sig)}`, exp };
 }

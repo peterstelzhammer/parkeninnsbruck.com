@@ -43,7 +43,7 @@ export async function renderePdf(blocks, { id, titel = "Mietvertrag Stellplatz" 
       .join("");
 
   const W = A4[0] - M.l - M.r;
-  let page, y;
+  let page, y, vsig = null;
 
   function box(x, top, w, h, { fill = null, border = null, r = 8 } = {}) {
     page.drawSvgPath(rr(w, h, r), {
@@ -237,7 +237,9 @@ export async function renderePdf(blocks, { id, titel = "Mietvertrag Stellplatz" 
         page.drawText("Ort, Datum", { x: x + pad, y: yy - 8, size: 8, font: F, color: GREY });
         if (s.ortDatum) page.drawText(clean(s.ortDatum), { x: x + pad, y: yy - 20, size: 10, font: F, color: BLACK });
         page.drawLine({ start: { x: x + pad, y: yy - 24 }, end: { x: x + cw - pad, y: yy - 24 }, thickness: 0.6, color: GREY });
+        const ortY = yy - 20;
         yy -= 64;
+        if (i === 0) vsig = [doc.getPageCount() - 1, x + pad, ortY, yy + 1, cw - 2 * pad].map((n) => Math.round(n * 10) / 10).join(",");
         if (s.bild) {
           const bytes = Uint8Array.from(atob(s.bild.split(",")[1]), (c) => c.charCodeAt(0));
           const img = await doc.embedPng(bytes);
@@ -254,6 +256,7 @@ export async function renderePdf(blocks, { id, titel = "Mietvertrag Stellplatz" 
     }
   }
 
+  if (vsig) doc.setKeywords([`vsig:${vsig}`]);
   const seiten = doc.getPages();
   seiten.forEach((pg, i) => {
     pg.drawLine({ start: { x: M.l, y: 50 }, end: { x: A4[0] - M.r, y: 50 }, thickness: 0.6, color: LINE });

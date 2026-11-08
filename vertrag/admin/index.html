@@ -107,12 +107,41 @@
     </div>
   </section>
 
+  <section class="card hidden" id="gz">
+    <h2 id="gzTitel">Gegenzeichnen</h2>
+    <p class="small" id="gzInfo"></p>
+    <div id="gzSchritt1">
+      <h3 style="margin:14px 0 6px;font-size:16px">A) Hier unterschreiben (Finger oder Stift)</h3>
+      <canvas class="pad" id="gzPad"></canvas>
+      <div class="btns">
+        <button type="button" class="btn small" id="gzLeeren" style="flex:0 0 auto">Unterschrift löschen</button>
+        <button type="button" class="btn primary" id="gzSenden">Gegenzeichnen und speichern</button>
+      </div>
+      <p class="small hidden" id="gzNurUpload">Online gegenzeichnen geht nur bei online unterschriebenen Verträgen (neu erzeugt). Bitte Variante B nutzen.</p>
+      <h3 style="margin:22px 0 6px;font-size:16px">B) Oder gegengezeichnetes Dokument hochladen</h3>
+      <p class="small">PDF laden, auf <a href="https://www.a-trust.at/pdfsign" target="_blank" rel="noopener">a-trust.at/pdfsign</a> mit ID Austria signieren oder ausdrucken, unterschreiben und scannen. Dann hier hochladen (PDF, JPG oder PNG).</p>
+      <input type="file" id="gzDatei" accept="application/pdf,image/jpeg,image/png">
+      <div class="btns"><button type="button" class="btn" id="gzUpload">Hochladen und speichern</button></div>
+    </div>
+    <div id="gzSchritt2" class="hidden">
+      <div class="ok">Gegenzeichnung gespeichert. Jetzt die E-Mail an den Mieter senden, du bekommst eine Kopie (Cc).</div>
+      <div class="btns">
+        <a class="btn primary" id="gzGmail" target="_blank" rel="noopener">E-Mail in Gmail öffnen</a>
+        <a class="btn" id="gzMailto">Im Mailprogramm öffnen</a>
+        <button class="btn" id="gzText" type="button">E-Mail-Text kopieren</button>
+      </div>
+      <p class="small">Die Mail enthält einen Download-Link zur gegengezeichneten Ausfertigung (180 Tage gültig).</p>
+    </div>
+    <div class="err hidden" id="gzFehler"></div>
+    <div class="btns"><button type="button" class="btn small" id="gzZu" style="flex:0 0 auto">Schließen</button></div>
+  </section>
+
   <section class="card">
     <div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
       <h2 style="margin:0">Eingegangene Verträge</h2>
       <button class="btn small" id="neuLaden" type="button">Aktualisieren</button>
     </div>
-    <p class="small">Online unterschriebene PDFs und hochgeladene Dokumente. Nach dem Gegenzeichnen herunterladen und hier löschen.</p>
+    <p class="small">Online unterschriebene PDFs und hochgeladene Dokumente. Mit „Gegenzeichnen“ unterschreibst du direkt hier oder lädst ein gegengezeichnetes Dokument hoch; danach geht die E-Mail an den Mieter.</p>
     <div id="liste" class="small" style="overflow-x:auto">Lade …</div>
   </section>
 </div></main>
@@ -275,13 +304,15 @@ f.addEventListener("submit", async (ev) => {
 });
 $("kopieren").addEventListener("click", () => navigator.clipboard.writeText($("link").value).then(() => ($("kopieren").textContent = "Kopiert ✓")));
 
-const ART = { online: "online unterschrieben", haendisch: "händisch, hochgeladen", idaustria: "ID Austria, hochgeladen" };
+const ART = { online: "online unterschrieben", haendisch: "händisch, hochgeladen", idaustria: "ID Austria, hochgeladen", gegengezeichnet: "gegengezeichnet" };
+let LISTE = [];
 async function liste() {
   const el = $("liste");
   try {
     const r = await fetch("/api/admin/liste");
     if (!r.ok) throw new Error((await r.json().catch(() => ({}))).fehler?.[0] || r.status);
     const l = await r.json();
+    LISTE = l;
     if (!l.length) { el.textContent = "Noch keine Einreichungen."; return; }
     el.innerHTML = `<table class="list"><thead><tr><th>Eingang</th><th>Mieter / Platz</th><th>Art</th><th></th></tr></thead><tbody>${l
       .map((o) => {
@@ -291,6 +322,9 @@ async function liste() {
           <td><b>${esc(o.mieter) || "–"}</b><br>${esc(o.standort)} ${esc(o.platz)} · ${id}</td>
           <td>${ART[o.art] || esc(o.art)}</td>
           <td style="white-space:nowrap"><a class="btn small" href="/api/admin/datei?key=${encodeURIComponent(o.key)}">Laden</a>
+          ${o.art === "gegengezeichnet"
+            ? `<button class="btn small primary" data-mail="${esc(o.key)}">Mail an Mieter</button>`
+            : `<button class="btn small primary" data-gz="${esc(o.key)}">Gegenzeichnen</button>`}
           <button class="btn small" data-del="${esc(o.key)}">Löschen</button></td></tr>`;
       })
       .join("")}</tbody></table>`;
@@ -298,6 +332,11 @@ async function liste() {
     el.textContent = "Liste nicht verfügbar: " + e.message;
   }
 }
+$("liste").addEventListener("click", (ev) => {
+  const t = ev.target;
+  if (t.dataset?.gz) gzOeffnen(t.dataset.gz);
+  if (t.dataset?.mail) gzMail(t.dataset.mail);
+});
 $("liste").addEventListener("click", async (ev) => {
   const k = ev.target.dataset?.del;
   if (!k || !confirm("Datei endgültig löschen?")) return;
@@ -305,6 +344,120 @@ $("liste").addEventListener("click", async (ev) => {
   liste();
 });
 $("neuLaden").addEventListener("click", liste);
+
+// ---------- Gegenzeichnung ----------
+const pad = (() => {
+  const c = $("gzPad");
+  const ctx = c.getContext("2d");
+  let leer = true, zeichnet = false, last = null;
+  function resize() {
+    const r = c.getBoundingClientRect();
+    if (!r.width) return;
+    const dpr = Math.max(window.devicePixelRatio || 1, 2);
+    c.width = r.width * dpr; c.height = r.height * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.lineWidth = 2.4; ctx.lineCap = "round"; ctx.lineJoin = "round"; ctx.strokeStyle = "#0b2a4a";
+    leer = true;
+  }
+  const pos = (e) => { const r = c.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; };
+  c.addEventListener("pointerdown", (e) => { zeichnet = true; last = pos(e); c.setPointerCapture(e.pointerId); ctx.beginPath(); ctx.arc(last.x, last.y, 1.1, 0, 7); ctx.fillStyle = "#0b2a4a"; ctx.fill(); leer = false; });
+  c.addEventListener("pointermove", (e) => { if (!zeichnet) return; const p = pos(e); ctx.beginPath(); ctx.moveTo(last.x, last.y); ctx.lineTo(p.x, p.y); ctx.stroke(); last = p; leer = false; });
+  const ende = () => (zeichnet = false);
+  c.addEventListener("pointerup", ende); c.addEventListener("pointercancel", ende);
+  function png() {
+    const { width: w, height: h } = c;
+    const d = ctx.getImageData(0, 0, w, h).data;
+    let x0 = w, y0 = h, x1 = 0, y1 = 0;
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (d[(y * w + x) * 4 + 3] > 10) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+    const m = 12, cw = Math.min(w, x1 - x0 + 2 * m), ch = Math.min(h, y1 - y0 + 2 * m);
+    const o = document.createElement("canvas");
+    const sc = Math.min(1, 900 / cw);
+    o.width = Math.round(cw * sc); o.height = Math.round(ch * sc);
+    o.getContext("2d").drawImage(c, Math.max(0, x0 - m), Math.max(0, y0 - m), cw, ch, 0, 0, o.width, o.height);
+    return o.toDataURL("image/png");
+  }
+  return { resize, leer: () => leer, png, leeren: () => { ctx.clearRect(0, 0, c.width, c.height); leer = true; } };
+})();
+$("gzLeeren").addEventListener("click", () => pad.leeren());
+
+let gzKey = null;
+const gzFehler = (m) => { $("gzFehler").textContent = m || ""; $("gzFehler").classList.toggle("hidden", !m); };
+function gzOeffnen(key) {
+  const o = LISTE.find((x) => x.key === key);
+  if (!o) return;
+  gzKey = key;
+  gzFehler("");
+  $("gzTitel").textContent = "Gegenzeichnen: " + (o.mieter || key.split("/")[1]);
+  $("gzInfo").textContent = `${o.standort || ""} ${o.platz || ""} · ${ART[o.art] || o.art}`;
+  $("gzSchritt1").classList.remove("hidden");
+  $("gzSchritt2").classList.add("hidden");
+  const online = o.art === "online";
+  $("gzPad").classList.toggle("hidden", !online);
+  $("gzLeeren").classList.toggle("hidden", !online);
+  $("gzSenden").classList.toggle("hidden", !online);
+  $("gzNurUpload").classList.toggle("hidden", online);
+  $("gzDatei").value = "";
+  $("gz").classList.remove("hidden");
+  $("gz").scrollIntoView({ behavior: "smooth" });
+  if (online) setTimeout(() => pad.resize(), 50);
+}
+$("gzZu").addEventListener("click", () => $("gz").classList.add("hidden"));
+
+async function antwort(r) {
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.fehler?.[0] || "Fehler " + r.status);
+  return j;
+}
+$("gzSenden").addEventListener("click", async () => {
+  gzFehler("");
+  if (pad.leer()) return gzFehler("Bitte im Feld unterschreiben.");
+  if (!confirm("Vertrag jetzt als Vermieter gegenzeichnen?")) return;
+  $("gzSenden").disabled = true;
+  try {
+    const j = await antwort(await fetch("/api/admin/gegenzeichnen", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ key: gzKey, bild: pad.png() }) }));
+    await gzFertig(j.key);
+  } catch (e) { gzFehler(e.message); } finally { $("gzSenden").disabled = false; }
+});
+$("gzUpload").addEventListener("click", async () => {
+  gzFehler("");
+  const datei = $("gzDatei").files[0];
+  if (!datei) return gzFehler("Bitte eine Datei auswählen.");
+  const fd = new FormData(); fd.append("key", gzKey); fd.append("datei", datei);
+  $("gzUpload").disabled = true;
+  try {
+    const j = await antwort(await fetch("/api/admin/gegenzeichnung-upload", { method: "POST", body: fd }));
+    await gzFertig(j.key);
+  } catch (e) { gzFehler(e.message); } finally { $("gzUpload").disabled = false; }
+});
+async function gzFertig(key) {
+  await liste();
+  await gzMail(key);
+}
+
+// E-Mail an den Mieter (Cc an dich) mit Download-Link zur gegengezeichneten Ausfertigung
+async function gzMail(key) {
+  const o = LISTE.find((x) => x.key === key);
+  gzFehler("");
+  $("gz").classList.remove("hidden");
+  try {
+    const j = await antwort(await fetch("/api/admin/gz-link", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ key }) }));
+    const vorname = ((o?.mieter || "").trim().split(/\s+/)[0]) || "";
+    const betreff = `Dein Mietvertrag für den Stellplatz ${o?.standort || ""} Nr. ${o?.platz || ""} (gegengezeichnet)`;
+    const text =
+      `Hallo${vorname ? " " + vorname : ""},\n\nder Mietvertrag ist jetzt von beiden Seiten unterschrieben. Hier kannst du die gegengezeichnete Ausfertigung herunterladen:\n\n${j.url}\n\n` +
+      `Der Link ist bis ${datumDE(new Date(j.bis).toISOString().slice(0, 10))} gültig. Bitte speichere das PDF bei dir ab.\n\n` +
+      `Schöne Grüsse / Regards\nPeter Stelzhammer\n+43 (664) 16 11 444 | Rhombergstrasse 33 | 6067 Absam | Austria\np.stelzhammer@gmail.com`;
+    const to = encodeURIComponent(o?.email || ""), cc = encodeURIComponent("p.stelzhammer@gmail.com");
+    $("gzGmail").href = `https://mail.google.com/mail/?view=cm&fs=1&to=${to}&cc=${cc}&su=${encodeURIComponent(betreff)}&body=${encodeURIComponent(text)}`;
+    $("gzMailto").href = `mailto:${o?.email || ""}?cc=${cc}&subject=${encodeURIComponent(betreff)}&body=${encodeURIComponent(text)}`;
+    $("gzText").onclick = () => navigator.clipboard.writeText(`${betreff}\n\n${text}`).then(() => ($("gzText").textContent = "Kopiert ✓"));
+    $("gzTitel").textContent = "E-Mail an den Mieter: " + (o?.mieter || "");
+    $("gzInfo").textContent = o?.email ? `An: ${o.email} · Cc: p.stelzhammer@gmail.com` : "Keine Mieter-E-Mail gespeichert, bitte in Gmail die Adresse eintragen. Cc: p.stelzhammer@gmail.com";
+    $("gzSchritt1").classList.add("hidden");
+    $("gzSchritt2").classList.remove("hidden");
+    $("gz").scrollIntoView({ behavior: "smooth" });
+  } catch (e) { gzFehler(e.message); }
+}
 
 plaetze();
 $("beginn").value = ersterNaechsterMonat();

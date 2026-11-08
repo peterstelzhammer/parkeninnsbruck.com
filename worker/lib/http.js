@@ -66,7 +66,7 @@ export function jetztWien() {
 
 export async function anzahlEinreichungen(env, id) {
   const l = await env.VERTRAEGE.list({ prefix: `vertraege/${id}/` });
-  return l.objects.length;
+  return l.objects.filter((o) => !o.key.includes("_gegengezeichnet")).length;
 }
 
 export async function pruefeLimit(env, id) {
