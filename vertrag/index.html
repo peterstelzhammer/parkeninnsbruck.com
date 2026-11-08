@@ -68,7 +68,11 @@
         <div class="btns" style="margin:8px 0 0"><button type="button" class="btn small" id="padLeeren" style="flex:0 0 auto">Unterschrift löschen</button></div>
         <div class="row" style="margin-top:14px"><div><label for="ort">Ort</label><input type="text" id="ort" name="ort" value="Innsbruck"></div></div>
         <label class="check"><input type="checkbox" id="zustimmung"><span>Ich habe den Vertrag gelesen und schließe ihn mit meiner Unterschrift verbindlich ab.</span></label>
-        <div class="btns"><button type="button" class="btn primary" id="onlineSenden">Verbindlich unterschreiben</button></div>
+        <div class="btns">
+          <button type="button" class="btn" data-pdf="vorschau">Vorschau: Vertrag als PDF ansehen</button>
+          <button type="button" class="btn primary" id="onlineSenden">Verbindlich unterschreiben</button>
+        </div>
+        <p class="small" style="margin-top:8px">Wenn alle Felder ausgefüllt sind, kannst du den Vertrag vorab als PDF herunterladen und in Ruhe ansehen, bevor du unterschreibst.</p>
       </div>
 
       <div data-panel="papier" class="hidden">
@@ -312,7 +316,7 @@ document.querySelectorAll("[data-pdf]").forEach((b) =>
       const r = await fetch("/api/vertrag/pdf", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ t: T, mieter: m }) });
       if (!r.ok) throw await fehlerAus(r);
       speichere(await r.blob(), dateinameAus(r, "Mietvertrag.pdf"));
-      b.textContent = "✓ PDF heruntergeladen – jetzt unterschreiben und unten hochladen";
+      b.textContent = b.dataset.pdf === "vorschau" ? "✓ Vorschau heruntergeladen" : "✓ PDF heruntergeladen – jetzt unterschreiben und unten hochladen";
     } catch (err) {
       fehler(err);
     } finally {

@@ -297,7 +297,7 @@ f.addEventListener("submit", async (ev) => {
     const text =
       `Hallo${(d.vorname || "").trim() ? " " + d.vorname.trim() : ""},\n\nhier ist der Link zu deinem Mietvertrag für den Stellplatz Nr. ${d.platz} (${LABEL[d.standort]}), Mietbeginn ${datumDE(d.beginn)}:\n\n${j.url}\n\n` +
       `So funktioniert es:\n` +
-      `1. Link öffnen und deine Daten eintragen. Sind alle Felder ausgefüllt, kannst du den Vertrag vorab als PDF herunterladen und in Ruhe ansehen, bevor du unterschreibst (Reiter „Auf Papier“, Button „PDF herunterladen“).\n` +
+      `1. Link öffnen und deine Daten eintragen. Sind alle Felder ausgefüllt, kannst du den Vertrag vorab als PDF herunterladen und in Ruhe ansehen, bevor du unterschreibst (Button „Vorschau: Vertrag als PDF ansehen“ beim Unterschreiben).\n` +
       `2. Unterschreiben – direkt online am Bildschirm, oder den Vertrag als PDF herunterladen und ausgedruckt bzw. mit ID Austria unterschreiben.\n` +
       `3. Wenn du nicht online unterschreibst: den unterschriebenen Vertrag über denselben Link wieder hochladen oder per E-Mail an p.stelzhammer@gmail.com schicken.\n\n` +
       `Bei der Online-Unterschrift ist der Vertrag sofort bei mir, sonst mit dem Hochladen bzw. deiner E-Mail. Danach bekommst du die gegengezeichnete Ausfertigung. Der Link ist bis ${bis} gültig.\n\n` +
