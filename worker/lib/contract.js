@@ -231,6 +231,16 @@ export function baueVertrag(k, m, cfg, sig = null) {
       "Hausordnung ist einzuhalten."
   );
 
+  if (s.stapelparker) {
+    h("Stapelparker");
+    p(
+      "Der Stellplatz befindet sich in einer Stapelparkeranlage. Die Abmessungen laut Aushang beim Stapelparker sind einzuhalten. " +
+        "Bei Störungen oder Fehlfunktionen der Anlage ist die beim Stapelparker angegebene Störungsnummer zu verständigen. " +
+        "Für Störungen und Fehlfunktionen der Anlage, auch für eine dadurch zeitweise nicht mögliche Ein- oder Ausfahrt, " +
+        "haftet der Vermieter nicht, soweit gesetzlich zulässig."
+    );
+  }
+
   h("Untervermietung");
   p("Eine Untervermietung oder sonstige Überlassung des Stellplatzes an Dritte ist ohne vorherige schriftliche Zustimmung des Vermieters nicht gestattet.");
 

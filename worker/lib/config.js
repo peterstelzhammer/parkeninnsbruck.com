@@ -18,6 +18,7 @@ export const STANDORTE = {
     adresse: "Tiefgarage Innrain, Innrain 36b, 6020 Innsbruck",
     plaetze: ["31"],
     zusatz: "Es handelt sich um einen Stapelparker; die maximale Fahrzeughöhe beträgt 1,50 m.",
+    stapelparker: true,
     medium: { nom: "ein Schlüssel", akk: "den Schlüssel", gen: "des Schlüssels", dat: "dem Schlüssel", Nom: "Der Schlüssel" },
     stelle: "die Hausverwaltung",
     pfand: 100,
