@@ -12,6 +12,7 @@ import * as authCode from "./api/auth/code.js";
 import * as authPruefen from "./api/auth/pruefen.js";
 import * as authLogout from "./api/auth/logout.js";
 import * as archivieren from "./api/admin/archivieren.js";
+import * as linkVorschau from "./api/admin/link-vorschau.js";
 import * as offen from "./api/admin/offen.js";
 import * as gzLink from "./api/admin/gz-link.js";
 import * as gegenzeichnung from "./api/vertrag/gegenzeichnung.js";
@@ -29,6 +30,7 @@ const ROUTEN = {
   "/api/admin/gegenzeichnung-upload": gegenzeichnungUpload,
   "/api/admin/gz-link": gzLink,
   "/api/admin/offen": offen,
+  "/api/admin/link-vorschau": linkVorschau,
   "/api/admin/archivieren": archivieren,
   "/api/auth/code": authCode,
   "/api/auth/pruefen": authPruefen,

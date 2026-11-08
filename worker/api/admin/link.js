@@ -12,10 +12,11 @@ export async function onRequestPost({ request, env }) {
     const { token, payload } = await erstelleToken(k, env.TOKEN_SECRET);
     const url = `${new URL(request.url).origin}/vertrag/?t=${token}`;
     if (env.VERTRAEGE) {
-      // Merkzettel für die Liste "wartet auf Mieter" (keine Vertragsdaten, nur Eckdaten)
-      await env.VERTRAEGE.put(`links/${payload.id}.json`, "{}", {
+      // Merkzettel für die Liste "wartet auf Mieter": Konditionen + Link (für Vorschau/Kopieren), keine Mieterdaten
+      await env.VERTRAEGE.put(`links/${payload.id}.json`, JSON.stringify({ k, url }), {
         customMetadata: {
           id: payload.id,
+          vorschau: "1",
           vorname: String(input.vorname || "").trim().slice(0, 60),
           email: k.email || "",
           standort: STANDORTE[k.standort].label,
