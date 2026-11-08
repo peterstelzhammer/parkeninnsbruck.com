@@ -118,6 +118,7 @@ function renderVertrag(blocks) {
     if (b.t === "title") return `<h3 style="font-size:17px;margin-top:0">${esc(b.text)}</h3>`;
     if (b.t === "h") return `<h3>${esc(b.text)}</h3>`;
     if (b.t === "p") return `<p>${b.runs.map((r) => (r.b ? `<b>${esc(r.text)}</b>` : esc(r.text))).join("")}</p>`;
+    if (b.t === "pay") return `<p>${esc(b.intro)}</p><table>${b.rows.map(([k, v]) => `<tr><td>${esc(k)}</td><td style="text-align:right">${esc(v)}</td></tr>`).join("")}<tr><td><b>${esc(b.total[0])}</b></td><td style="text-align:right"><b>${esc(b.total[1])}</b></td></tr></table>`;
     if (b.t === "kv") return `<p>${esc(b.intro || "")}</p><table>${b.rows.map(([k, v]) => `<tr><td>${esc(k)}</td><td>${esc(v)}</td></tr>`).join("")}</table>`;
     if (b.t === "parties") {
       const col = (s) => `<div><em>${esc(s.label)}</em><br>${s.rows.map(([k, v]) => `${esc(k)}: ${esc(v) || "…"}`).join("<br>")}</div>`;

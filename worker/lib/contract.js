@@ -69,7 +69,8 @@ export function baueVertrag(k, m, cfg, sig = null) {
   const B = [];
   const p = (...runs) => B.push({ t: "p", runs: runs.map((r) => (typeof r === "string" ? { text: r } : r)) });
   const b = (text) => ({ text, b: true });
-  const h = (text) => B.push({ t: "h", text });
+  let nr = 0;
+  const h = (text) => B.push({ t: "h", text: `§ ${++nr} ${text}` });
 
   B.push({ t: "title", text: "Mietvertrag über einen Kfz-Stellplatz" });
   B.push({
@@ -131,10 +132,12 @@ export function baueVertrag(k, m, cfg, sig = null) {
 
   h("Zahlung");
   if (posten.length > 1) {
-    p(
-      "Mit der ersten Monatsmiete sind zu überweisen: " + posten.map(([n, betrag]) => `${n} ${euro(betrag)}`).join(" + ") + " = ",
-      b(euro(gesamt))
-    );
+    B.push({
+      t: "pay",
+      intro: "Mit der ersten Monatsmiete sind zu überweisen:",
+      rows: posten.map(([n, betrag]) => [n.charAt(0).toUpperCase() + n.slice(1), euro(betrag)]),
+      total: ["Gesamt", euro(gesamt)],
+    });
   }
   B.push({
     t: "kv",
