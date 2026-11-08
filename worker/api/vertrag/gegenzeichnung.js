@@ -10,11 +10,11 @@ export async function onRequestGet({ request, env }) {
   if (!env.VERTRAEGE || !KEY_OK(key)) return fehler("Ungültig.", 400);
   const o = await env.VERTRAEGE.get(key);
   if (!o || o.customMetadata?.art !== "gegengezeichnet") return fehler("Nicht gefunden.", 404);
-  const ext = key.split(".").pop();
+  const name = (o.customMetadata.dateiname || "").replace(/[^\w.\-]/g, "_") || `Mietvertrag_gegengezeichnet.${key.split(".").pop()}`;
   return new Response(o.body, {
     headers: {
       "content-type": o.httpMetadata?.contentType || "application/octet-stream",
-      "content-disposition": `attachment; filename="Mietvertrag_Stellplatz_${(o.customMetadata.platz || "").replace(/[^\w]/g, "")}_gegengezeichnet.${ext}"`,
+      "content-disposition": `attachment; filename="${name}"`,
       "cache-control": "no-store",
       "x-robots-tag": "noindex",
     },

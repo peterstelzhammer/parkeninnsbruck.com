@@ -137,6 +137,14 @@
   </section>
 
   <section class="card">
+    <h2 style="margin:0 0 4px">Offene Verträge</h2>
+    <h3 style="margin:14px 0 4px;font-size:16px">Wartet auf deine Gegenzeichnung <span id="nGz" class="pill" style="margin-left:6px">0</span></h3>
+    <div id="offenGz" class="small" style="overflow-x:auto">Lade …</div>
+    <h3 style="margin:18px 0 4px;font-size:16px">Wartet auf den Mieter (Link verschickt, noch nichts eingegangen) <span id="nMieter" class="pill" style="margin-left:6px">0</span></h3>
+    <div id="offenMieter" class="small" style="overflow-x:auto">Lade …</div>
+  </section>
+
+  <section class="card">
     <div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
       <h2 style="margin:0">Eingegangene Verträge</h2>
       <button class="btn small" id="neuLaden" type="button">Aktualisieren</button>
@@ -295,6 +303,7 @@ f.addEventListener("submit", async (ev) => {
     $("mailto").href = `mailto:${d.email || ""}?subject=${encodeURIComponent(betreff)}&body=${encodeURIComponent(text)}`;
     $("textKopieren").onclick = () => navigator.clipboard.writeText(`${betreff}\n\n${text}`).then(() => ($("textKopieren").textContent = "Kopiert ✓"));
     $("ergebnis").classList.remove("hidden");
+    offenMieter();
     $("ergebnis").scrollIntoView({ behavior: "smooth" });
   } catch (err) {
     zeigeFehler(err);
@@ -313,6 +322,7 @@ async function liste() {
     if (!r.ok) throw new Error((await r.json().catch(() => ({}))).fehler?.[0] || r.status);
     const l = await r.json();
     LISTE = l;
+    offenGz();
     if (!l.length) { el.textContent = "Noch keine Einreichungen."; return; }
     el.innerHTML = `<table class="list"><thead><tr><th>Eingang</th><th>Mieter / Platz</th><th>Art</th><th></th></tr></thead><tbody>${l
       .map((o) => {
@@ -343,7 +353,7 @@ $("liste").addEventListener("click", async (ev) => {
   await fetch("/api/admin/datei?key=" + encodeURIComponent(k), { method: "DELETE" });
   liste();
 });
-$("neuLaden").addEventListener("click", liste);
+$("neuLaden").addEventListener("click", () => { liste(); offenMieter(); });
 
 // ---------- Gegenzeichnung ----------
 const pad = (() => {
@@ -459,10 +469,52 @@ async function gzMail(key) {
   } catch (e) { gzFehler(e.message); }
 }
 
+// ---------- Offene Verträge ----------
+const esc2 = (s) => String(s || "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const dt = (x) => new Date(x).toLocaleDateString("de-AT");
+function offenGz() {
+  const ids = {};
+  for (const o of LISTE) (ids[o.key.split("/")[1]] ||= []).push(o);
+  const warten = Object.values(ids)
+    .filter((g) => !g.some((o) => o.art === "gegengezeichnet"))
+    .map((g) => g.find((o) => o.art === "online") || g[0])
+    .sort((a, b) => (a.hochgeladen < b.hochgeladen ? 1 : -1));
+  $("nGz").textContent = warten.length;
+  $("offenGz").innerHTML = warten.length
+    ? `<table class="list"><thead><tr><th>Eingang</th><th>Mieter / Platz</th><th>Art</th><th></th></tr></thead><tbody>${warten
+        .map((o) => `<tr><td>${new Date(o.hochgeladen).toLocaleString("de-AT")}</td><td><b>${esc2(o.mieter) || "–"}</b><br>${esc2(o.standort)} ${esc2(o.platz)}</td><td>${ART[o.art] || esc2(o.art)}</td><td style="white-space:nowrap"><button class="btn small primary" data-gz="${esc2(o.key)}">Gegenzeichnen</button></td></tr>`)
+        .join("")}</tbody></table>`
+    : "Nichts offen.";
+}
+async function offenMieter() {
+  try {
+    const r = await fetch("/api/admin/offen");
+    if (!r.ok) throw new Error((await r.json().catch(() => ({}))).fehler?.[0] || r.status);
+    const l = await r.json();
+    $("nMieter").textContent = l.length;
+    $("offenMieter").innerHTML = l.length
+      ? `<table class="list"><thead><tr><th>Erzeugt</th><th>Mieter / Platz</th><th>Gültig bis</th><th></th></tr></thead><tbody>${l
+          .map((o) => `<tr><td>${dt(o.erstellt)}</td><td><b>${esc2(o.vorname) || esc2(o.email) || "–"}</b><br>${esc2(o.standort)} ${esc2(o.platz)} · Beginn ${dt(o.beginn)}</td><td>${o.abgelaufen ? "<b>abgelaufen</b>" : dt(Number(o.exp))}</td><td><button class="btn small" data-offendel="${esc2(o.id)}">Entfernen</button></td></tr>`)
+          .join("")}</tbody></table>`
+      : "Nichts offen.";
+  } catch (e) {
+    $("offenMieter").textContent = "Liste nicht verfügbar: " + e.message;
+  }
+}
+document.addEventListener("click", async (ev) => {
+  const t = ev.target;
+  if (t.dataset?.gz && !t.closest("#liste")) gzOeffnen(t.dataset.gz);
+  if (t.dataset?.offendel && confirm("Eintrag aus der Liste entfernen? Der Link selbst bleibt bis zum Ablauf gültig.")) {
+    await fetch("/api/admin/offen?id=" + encodeURIComponent(t.dataset.offendel), { method: "DELETE" });
+    offenMieter();
+  }
+});
+
 plaetze();
 $("beginn").value = ersterNaechsterMonat();
 rechne();
 liste();
+offenMieter();
 </script>
 </body>
 </html>

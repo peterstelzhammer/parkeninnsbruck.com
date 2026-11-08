@@ -105,7 +105,14 @@ export async function benachrichtige(env, betreff, text) {
   }
 }
 
+// Dateiname beginnt mit dem Namen des Mieters: Vorname_Nachname_Mietvertrag_Stellplatz_111_ID[_suffix].pdf
 export function dateiname(k, m, suffix) {
-  const n = (m?.name || "Mieter").normalize("NFKD").replace(/[^\w]+/g, "_").replace(/^_|_$/g, "");
-  return `Mietvertrag_Stellplatz_${k.platz}_${n}_${k.id}${suffix ? "_" + suffix : ""}.pdf`;
+  const uml = { ä: "ae", ö: "oe", ü: "ue", Ä: "Ae", Ö: "Oe", Ü: "Ue", ß: "ss" };
+  const n =
+    (m?.name || "Mieter")
+      .replace(/[äöüÄÖÜß]/g, (c) => uml[c])
+      .normalize("NFKD")
+      .replace(/[^\w]+/g, "_")
+      .replace(/^_+|_+$/g, "") || "Mieter";
+  return `${n}_Mietvertrag_Stellplatz_${k.platz}_${k.id}${suffix ? "_" + suffix : ""}.pdf`;
 }

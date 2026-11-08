@@ -19,7 +19,7 @@ export async function speichereGegenzeichnung(env, originalKey, bytes, ext, mime
       email: m.email || "",
       standort: m.standort || "",
       platz: m.platz || "",
-      dateiname: m.dateiname || "",
+      dateiname: (m.dateiname || "").replace(/(_online_signiert)?\.pdf$/, "") + `_gegengezeichnet.${ext}`,
       basis: originalKey,
       ...extra,
     },
