@@ -85,7 +85,7 @@ export function pruefeMieter(input) {
       .filter(Boolean)
       .slice(0, 5),
   };
-  if (m.name.length < 3) e.push("Name fehlt.");
+  if (!/^\S{2,}(\s+\S{2,})+$/.test(m.name)) e.push("Bitte Vor- und Nachnamen angeben.");
   if (m.strasse.length < 3) e.push("Straße fehlt.");
   if (m.plzOrt.length < 4) e.push("PLZ / Ort fehlt.");
   if (m.telefon.length < 6) e.push("Telefonnummer fehlt.");

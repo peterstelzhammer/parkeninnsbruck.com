@@ -71,3 +71,6 @@ table.list th,table.list td{text-align:left;padding:8px 6px;border-bottom:1px so
 table.list th{color:var(--muted);font-weight:600}
 .kz{display:flex;gap:8px;margin-bottom:8px}
 .kz input{flex:1}
+
+.bad{border-color:#c8102e!important;background:rgba(200,16,46,.05)!important}
+.fmsg{color:#8a0b20;font-size:13px;font-weight:600;margin:4px 0 0}

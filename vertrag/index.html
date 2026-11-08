@@ -30,6 +30,7 @@
 
     <form id="daten" class="card" novalidate autocomplete="on">
       <h2><span class="step">1</span>Deine Daten</h2>
+      <div id="dErr" class="err hidden" role="alert"></div>
       <div class="row">
         <div><label for="name">Vor- und Nachname</label><input type="text" id="name" name="name" autocomplete="name" required></div>
       </div>
@@ -99,9 +100,9 @@
     </section>
 
     <section class="card hidden" id="fertig">
-      <h2>Danke – dein Vertrag ist da</h2>
+      <h2 id="fertigTitel">Danke – dein Vertrag ist eingegangen</h2>
       <div class="ok" id="fertigText"></div>
-      <p class="small">Du musst nichts weiter tun. Die gegengezeichnete Ausfertigung bekommst du per E-Mail. Fragen: <a href="mailto:info@parkeninnsbruck.com">info@parkeninnsbruck.com</a></p>
+      <p class="small">Du musst nichts weiter tun. Schau bei Bedarf auch im Spam-Ordner nach. Fragen: <a href="mailto:info@parkeninnsbruck.com">info@parkeninnsbruck.com</a></p>
     </section>
 
     <p class="small">Datenschutz: Deine Angaben werden nur für den Abschluss und die Abwicklung dieses Mietvertrags verwendet. Beim Unterschreiben speichern wir den Vertrag sowie Zeitpunkt und IP-Adresse als Nachweis. Kein Tracking, keine Cookies. Vertrags-ID <span id="vid"></span>.</p>
@@ -154,19 +155,50 @@ function mieter() {
   };
 }
 function lokalePruefung(m) {
-  const e = [];
-  if ((m.name || "").trim().length < 3) e.push("Bitte deinen Namen angeben.");
-  if ((m.strasse || "").trim().length < 3) e.push("Bitte deine Straße angeben.");
-  if ((m.plzOrt || "").trim().length < 4) e.push("Bitte PLZ und Ort angeben.");
-  if ((m.telefon || "").trim().length < 6) e.push("Bitte deine Telefonnummer angeben.");
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((m.email || "").trim())) e.push("Bitte eine gültige E-Mail-Adresse angeben.");
-  if (!m.kennzeichen.length) e.push("Bitte mindestens ein Kennzeichen angeben.");
+  const f = [];
+  const add = (id, t) => f.push({ id, t });
+  if (!/^\S{2,}(\s+\S{2,})+$/.test((m.name || "").trim())) add("name", "Bitte Vor- und Nachnamen angeben.");
+  if ((m.strasse || "").trim().length < 3) add("strasse", "Bitte deine Straße und Hausnummer angeben.");
+  if ((m.plzOrt || "").trim().length < 4) add("plzOrt", "Bitte PLZ und Ort angeben.");
+  if ((m.telefon || "").trim().length < 6) add("telefon", "Bitte deine Telefonnummer angeben.");
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((m.email || "").trim())) add("email", "Bitte eine gültige E-Mail-Adresse angeben.");
+  if (!m.kennzeichen.length) add("kz", "Bitte mindestens ein Kennzeichen angeben.");
+  const e = f.map((x) => x.t);
+  e.felder = f;
   return e;
 }
-function fehler(list) {
-  $("sErr").innerHTML = (Array.isArray(list) ? list : [String(list)]).map((e) => `<div>${esc(e)}</div>`).join("");
+const feldEl = (id) => (id === "kz" ? document.querySelector('[name="kennzeichen"]') : $(id));
+function markiere(felder) {
+  document.querySelectorAll(".bad").forEach((el) => el.classList.remove("bad"));
+  document.querySelectorAll(".fmsg").forEach((el) => el.remove());
+  for (const { id, t } of felder) {
+    const el = feldEl(id);
+    if (!el) continue;
+    el.classList.add("bad");
+    const m = document.createElement("div");
+    m.className = "fmsg";
+    m.textContent = t;
+    (id === "kz" ? $("kzListe") : el).insertAdjacentElement("afterend", m);
+  }
+}
+// scroll=false: nur neu markieren (z. B. während der Eingabe)
+function fehler(list, scroll = true) {
+  list = Array.isArray(list) ? list : [String(list)];
+  const felder = list.felder || [];
+  const html = list.map((e) => `<div>${esc(e)}</div>`).join("");
+  $("sErr").innerHTML = html;
   $("sErr").classList.toggle("hidden", !list.length);
-  if (list.length) $("sErr").scrollIntoView({ behavior: "smooth", block: "center" });
+  $("dErr").innerHTML = felder.length ? `<b>Bitte ergänze:</b>${html}` : "";
+  $("dErr").classList.toggle("hidden", !felder.length);
+  markiere(felder);
+  if (!list.length || !scroll) return;
+  if (felder.length) {
+    const el = feldEl(felder[0].id);
+    $("dErr").scrollIntoView({ behavior: "smooth", block: "start" });
+    setTimeout(() => el?.focus({ preventScroll: true }), 400);
+  } else {
+    $("sErr").scrollIntoView({ behavior: "smooth", block: "center" });
+  }
 }
 async function fehlerAus(r) {
   const j = await r.json().catch(() => ({}));
@@ -181,9 +213,10 @@ function speichere(blob, name) {
   setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 2000);
 }
 const dateinameAus = (r, fallback) => (r.headers.get("content-disposition") || "").match(/filename="([^"]+)"/)?.[1] || fallback;
-function fertig(text) {
+function fertig(titel, text) {
   $("signCard").classList.add("hidden");
   $("daten").classList.add("hidden");
+  $("fertigTitel").textContent = titel;
   $("fertigText").textContent = text;
   $("fertig").classList.remove("hidden");
   $("fertig").scrollIntoView({ behavior: "smooth" });
@@ -255,7 +288,10 @@ $("onlineSenden").addEventListener("click", async () => {
     const r = await fetch("/api/vertrag/signieren", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ t: T, mieter: m, bild: pad.png(), zustimmung: true }) });
     if (!r.ok) throw await fehlerAus(r);
     speichere(await r.blob(), dateinameAus(r, "Mietvertrag.pdf"));
-    fertig("Du hast den Vertrag unterschrieben. Eine Kopie wurde gerade heruntergeladen.");
+    fertig(
+      "Geschafft – dein Vertrag ist unterschrieben",
+      `Du hast den Vertrag unterschrieben, eine Kopie wurde gerade heruntergeladen. Er liegt jetzt bei uns zur Gegenzeichnung. Die von beiden Seiten unterschriebene Ausfertigung bekommst du zeitnah per E-Mail an ${m.email.trim()}.`
+    );
   } catch (err) {
     fehler(err);
   } finally {
@@ -263,12 +299,14 @@ $("onlineSenden").addEventListener("click", async () => {
   }
 });
 
+$("daten").addEventListener("input", () => { if (document.querySelector(".bad")) fehler(lokalePruefung(mieter()), false); });
+
 document.querySelectorAll("[data-pdf]").forEach((b) =>
   b.addEventListener("click", async () => {
     const m = mieter();
     const e = lokalePruefung(m);
     fehler(e);
-    if (e.length) { $("daten").scrollIntoView({ behavior: "smooth" }); return; }
+    if (e.length) return;
     b.disabled = true;
     try {
       const r = await fetch("/api/vertrag/pdf", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ t: T, mieter: m }) });
@@ -297,7 +335,10 @@ document.querySelectorAll("[data-upload]").forEach((b) =>
     try {
       const r = await fetch("/api/vertrag/upload", { method: "POST", body: fd });
       if (!r.ok) throw await fehlerAus(r);
-      fertig("Dein unterschriebener Vertrag ist bei uns eingegangen.");
+      fertig(
+        "Danke – dein Vertrag ist eingegangen",
+        "Dein unterschriebener Vertrag ist bei uns eingegangen und liegt jetzt zur Gegenzeichnung bei uns. Die von beiden Seiten unterschriebene Ausfertigung bekommst du zeitnah per E-Mail."
+      );
     } catch (err) {
       fehler(err);
     } finally {
