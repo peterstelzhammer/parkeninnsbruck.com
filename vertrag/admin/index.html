@@ -92,12 +92,13 @@
     <div id="fErr" class="err hidden"></div>
     <div class="btns" style="margin-top:16px">
       <button type="button" class="btn" id="vorschau">Vorschau (PDF)</button>
-      <button type="submit" class="btn primary" id="erzeugen">Link erzeugen</button>
+      <button type="submit" class="btn primary" id="erzeugen">Link erzeugen und in Gmail öffnen</button>
     </div>
   </form>
 
   <section class="card hidden" id="ergebnis">
     <h2>Link für den Mieter</h2>
+    <p class="small" style="margin-top:0">Der Link ist erzeugt und unter „Wartet auf den Mieter“ vermerkt. Ändern sich die Konditionen im Formular, verschwindet dieser Bereich; dann einen neuen Link erzeugen.</p>
     <p class="small" id="gueltig"></p>
     <div class="linkbox"><input type="text" id="link" readonly><button class="btn small" id="kopieren" type="button">Kopieren</button></div>
     <div class="btns" style="margin-top:14px">
@@ -254,6 +255,9 @@ async function post(url, body) {
 $("standort").addEventListener("change", () => { plaetze(); pfandManuell = false; rechne(); });
 $("kautionBetrag").addEventListener("input", () => { kautionManuell = true; rechne(); });
 $("pfandBetrag").addEventListener("input", () => { pfandManuell = true; rechne(); });
+const ergebnisAus = () => $("ergebnis").classList.add("hidden");
+f.addEventListener("input", ergebnisAus);
+f.addEventListener("change", ergebnisAus);
 f.addEventListener("input", () => { rechne(); if (!$("fErr").classList.contains("hidden")) zeigeFehler(lokalePruefung(daten())); });
 f.addEventListener("change", rechne);
 
@@ -282,7 +286,8 @@ f.addEventListener("submit", async (ev) => {
   const gebuehrTxt = d.gebuehr === "mieter" ? "Der MIETER trägt die Vertragsgebühr." : "DU trägst die Vertragsgebühr.";
   const kautionTxt = d.kaution === "ja" ? `Kaution: ${eur(d.kautionBetrag)}.` : "KEINE Kaution.";
   const pfandTxt = d.pfand === "ja" ? `Pfand ${MEDIUM[d.standort][1]}: ${eur(d.pfandBetrag)}.` : "Kein Pfand.";
-  if (!confirm(`Bitte bestätigen:\n\nMonatsmiete: ${eur(d.miete)}.\n${gebuehrTxt}\n${kautionTxt}\n${pfandTxt}\n\nLink jetzt erzeugen?`)) return;
+  if (!confirm(`Bitte bestätigen:\n\nMonatsmiete: ${eur(d.miete)}.\n${gebuehrTxt}\n${kautionTxt}\n${pfandTxt}\n\nLink jetzt erzeugen und die E-Mail in Gmail öffnen?`)) return;
+  const fenster = window.open("", "_blank"); // sofort öffnen (Klick), damit der Popup-Blocker nicht greift
   $("erzeugen").disabled = true;
   try {
     const j = await (await post("/api/admin/link", d)).json();
@@ -307,7 +312,10 @@ f.addEventListener("submit", async (ev) => {
     $("ergebnis").classList.remove("hidden");
     offenMieter();
     $("ergebnis").scrollIntoView({ behavior: "smooth" });
+    if (fenster) fenster.location.href = $("gmail").href;
+    else $("gueltig").textContent += " · Popup blockiert: bitte unten „In Gmail öffnen“ klicken.";
   } catch (err) {
+    if (fenster) fenster.close();
     zeigeFehler(err);
   } finally {
     $("erzeugen").disabled = false;
