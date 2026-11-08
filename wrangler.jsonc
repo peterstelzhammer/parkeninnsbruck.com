@@ -1,0 +1,17 @@
+{
+  // Cloudflare Worker mit statischen Assets (Website) + API für Online-Mietverträge
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "parkeninnsbruck-com",
+  "main": "worker/index.js",
+  "compatibility_date": "2026-10-01",
+  "assets": {
+    "directory": ".",
+    "binding": "ASSETS",
+    "run_worker_first": ["/api/*", "/vertrag/admin", "/vertrag/admin/*"]
+  },
+  "r2_buckets": [
+    { "binding": "VERTRAEGE", "bucket_name": "parkeninnsbruck-vertraege" }
+  ],
+  "observability": { "enabled": true }
+  // Secrets (im Dashboard oder per `wrangler secret put`): ADMIN_PASSWORD, TOKEN_SECRET, VERTRAG_CONFIG
+}

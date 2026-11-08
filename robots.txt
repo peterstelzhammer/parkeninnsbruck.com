@@ -1,39 +1,63 @@
 # parkeninnsbruck.com – alle Suchmaschinen und KI-Assistenten willkommen
 User-agent: *
 Allow: /
+Disallow: /vertrag/
+Disallow: /api/
 
 # KI-Suche & Assistenten (ausdrücklich erlaubt)
 User-agent: GPTBot
 Allow: /
+Disallow: /vertrag/
+Disallow: /api/
 
 User-agent: OAI-SearchBot
 Allow: /
+Disallow: /vertrag/
+Disallow: /api/
 
 User-agent: ChatGPT-User
 Allow: /
+Disallow: /vertrag/
+Disallow: /api/
 
 User-agent: ClaudeBot
 Allow: /
+Disallow: /vertrag/
+Disallow: /api/
 
 User-agent: Claude-SearchBot
 Allow: /
+Disallow: /vertrag/
+Disallow: /api/
 
 User-agent: Claude-User
 Allow: /
+Disallow: /vertrag/
+Disallow: /api/
 
 User-agent: Google-Extended
 Allow: /
+Disallow: /vertrag/
+Disallow: /api/
 
 User-agent: PerplexityBot
 Allow: /
+Disallow: /vertrag/
+Disallow: /api/
 
 User-agent: Perplexity-User
 Allow: /
+Disallow: /vertrag/
+Disallow: /api/
 
 User-agent: Applebot-Extended
 Allow: /
+Disallow: /vertrag/
+Disallow: /api/
 
 User-agent: Bingbot
 Allow: /
+Disallow: /vertrag/
+Disallow: /api/
 
 Sitemap: https://parkeninnsbruck.com/sitemap.xml

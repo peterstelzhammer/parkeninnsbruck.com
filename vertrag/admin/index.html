@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Mietvertrag erstellen | Admin</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/vertrag/vertrag.css">
+</head>
+<body>
+<header class="top"><div class="wrap">
+  <a class="brand" href="/"><span class="p">P</span>parkeninnsbruck.com</a>
+  <span class="pill">Admin</span>
+</div></header>
+
+<main><div class="wrap">
+  <h1>Mietvertrag erstellen</h1>
+  <p class="sub">Konditionen festlegen, Vorschau prüfen, Link an den Mieter schicken.</p>
+
+  <form id="f" class="card" novalidate>
+    <h2><span class="step">1</span>Stellplatz</h2>
+    <div class="row two">
+      <div>
+        <label for="standort">Standort</label>
+        <select id="standort" name="standort">
+          <option value="kaiserjaeger">Kaiserjägergarage</option>
+          <option value="innrain">Tiefgarage Innrain</option>
+        </select>
+      </div>
+      <div>
+        <label for="platz">Stellplatz-Nr.</label>
+        <select id="platz" name="platz"></select>
+      </div>
+    </div>
+    <div class="row two">
+      <div>
+        <label for="miete">Mietzins pro Monat (EUR)</label>
+        <input type="number" id="miete" name="miete" min="1" step="0.01" value="99" inputmode="decimal">
+      </div>
+      <div>
+        <label for="beginn">Mietbeginn</label>
+        <input type="date" id="beginn" name="beginn">
+      </div>
+    </div>
+
+    <h2 style="margin-top:22px"><span class="step">2</span>Vertragsgebühr</h2>
+    <p class="small" style="margin-top:-6px">1 % von 36 Monatsmieten = <b id="gebuehrBetrag">–</b>. Abführen musst du sie in jedem Fall.</p>
+    <div class="choice" role="radiogroup">
+      <label class="opt"><input type="radio" name="gebuehr" value="mieter"><span>Mieter trägt die Gebühr<small>wird mit der ersten Miete weiterverrechnet</small></span></label>
+      <label class="opt"><input type="radio" name="gebuehr" value="vermieter"><span>Ich trage die Gebühr<small>Mieter zahlt nichts dafür</small></span></label>
+    </div>
+
+    <h2 style="margin-top:22px"><span class="step">3</span>Kaution</h2>
+    <div class="choice" role="radiogroup">
+      <label class="opt"><input type="radio" name="kaution" value="ja"><span>Kaution verlangen<small>Standard: 2 Monatsmieten</small></span></label>
+      <label class="opt"><input type="radio" name="kaution" value="nein"><span>Keine Kaution</span></label>
+    </div>
+    <div class="row two hidden" id="kautionRow" style="margin-top:12px">
+      <div>
+        <label for="kautionBetrag">Kautionsbetrag (EUR)</label>
+        <input type="number" id="kautionBetrag" name="kautionBetrag" min="1" step="0.01" inputmode="decimal">
+      </div>
+    </div>
+
+    <h2 style="margin-top:22px"><span class="step">4</span>Mieter <span class="hint">(optional)</span></h2>
+    <div class="row">
+      <div>
+        <label for="email">E-Mail-Adresse des Mieters</label>
+        <input type="email" id="email" name="email" placeholder="für den Versand der E-Mail">
+      </div>
+    </div>
+
+    <h2 style="margin-top:22px"><span class="step">5</span>Zusammenfassung</h2>
+    <dl class="sum" id="sum"></dl>
+    <div id="fErr" class="err hidden"></div>
+    <div class="btns" style="margin-top:16px">
+      <button type="button" class="btn" id="vorschau">Vorschau (PDF)</button>
+      <button type="submit" class="btn primary" id="erzeugen">Link erzeugen</button>
+    </div>
+  </form>
+
+  <section class="card hidden" id="ergebnis">
+    <h2>Link für den Mieter</h2>
+    <p class="small" id="gueltig"></p>
+    <div class="linkbox"><input type="text" id="link" readonly><button class="btn small" id="kopieren" type="button">Kopieren</button></div>
+    <div class="btns" style="margin-top:14px">
+      <a class="btn primary" id="gmail" target="_blank" rel="noopener">In Gmail öffnen</a>
+      <a class="btn" id="mailto">Im Mailprogramm öffnen</a>
+      <button class="btn" id="textKopieren" type="button">E-Mail-Text kopieren</button>
+    </div>
+  </section>
+
+  <section class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
+      <h2 style="margin:0">Eingegangene Verträge</h2>
+      <button class="btn small" id="neuLaden" type="button">Aktualisieren</button>
+    </div>
+    <p class="small">Online unterschriebene PDFs und hochgeladene Dokumente. Nach dem Gegenzeichnen herunterladen und hier löschen.</p>
+    <div id="liste" class="small" style="overflow-x:auto">Lade …</div>
+  </section>
+</div></main>
+
+<script>
+const PLAETZE = { kaiserjaeger: ["111", "112", "113", "114"], innrain: ["31"] };
+const LABEL = { kaiserjaeger: "Kaiserjägergarage", innrain: "Tiefgarage Innrain" };
+const $ = (id) => document.getElementById(id);
+const f = $("f");
+const eur = (n) => "EUR " + n.toLocaleString("de-AT", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const datumDE = (iso) => { const [y, m, d] = iso.split("-"); return `${+d}.${+m}.${y}`; };
+let kautionManuell = false;
+
+function plaetze() {
+  const s = $("standort").value;
+  $("platz").innerHTML = PLAETZE[s].map((p) => `<option>${p}</option>`).join("");
+}
+function ersterNaechsterMonat() {
+  const d = new Date();
+  const n = new Date(d.getFullYear(), d.getMonth() + 1, 1);
+  return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, "0")}-01`;
+}
+function daten() {
+  const fd = new FormData(f);
+  return Object.fromEntries(fd.entries());
+}
+function rechne() {
+  const d = daten();
+  const miete = Math.round(Number(d.miete) * 100) / 100 || 0;
+  const gebuehr = Math.round(miete * 36) / 100;
+  $("gebuehrBetrag").textContent = eur(gebuehr);
+  $("kautionRow").classList.toggle("hidden", d.kaution !== "ja");
+  if (d.kaution === "ja" && !kautionManuell) $("kautionBetrag").value = (miete * 2).toFixed(2);
+  const kaution = d.kaution === "ja" ? Number($("kautionBetrag").value) || 0 : 0;
+  const posten = [["Erste Monatsmiete", miete]];
+  if (d.gebuehr === "mieter") posten.push(["Vergebührung", gebuehr]);
+  if (kaution) posten.push(["Kaution", kaution]);
+  const gesamt = posten.reduce((s, [, b]) => s + b, 0);
+  const offen = (v) => (v ? v : '<span style="color:var(--red)">noch nicht festgelegt</span>');
+  $("sum").innerHTML = `
+    <dt>Stellplatz</dt><dd>${LABEL[d.standort]}, Nr. ${d.platz || "–"}</dd>
+    <dt>Mietbeginn</dt><dd>${d.beginn ? datumDE(d.beginn) : "–"}</dd>
+    <dt>Monatsmiete</dt><dd>${eur(miete)}</dd>
+    <dt>Vertragsgebühr</dt><dd>${offen(d.gebuehr === "mieter" ? `Mieter (${eur(gebuehr)})` : d.gebuehr === "vermieter" ? `ich trage sie (${eur(gebuehr)})` : "")}</dd>
+    <dt>Kaution</dt><dd>${offen(d.kaution === "ja" ? eur(kaution) : d.kaution === "nein" ? "keine" : "")}</dd>
+    <dt>Fällig mit 1. Miete</dt><dd class="total">${eur(gesamt)}</dd>`;
+}
+function zeigeFehler(list) {
+  $("fErr").innerHTML = list.map((e) => `<div>${e}</div>`).join("");
+  $("fErr").classList.toggle("hidden", !list.length);
+}
+function lokalePruefung(d) {
+  const e = [];
+  if (!d.gebuehr) e.push("Bitte festlegen, wer die Vertragsgebühr trägt.");
+  if (!d.kaution) e.push("Bitte festlegen, ob eine Kaution verlangt wird.");
+  if (!d.beginn) e.push("Bitte den Mietbeginn wählen.");
+  return e;
+}
+async function post(url, body) {
+  const r = await fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+  if (!r.ok) {
+    const j = await r.json().catch(() => ({ fehler: [`Fehler ${r.status}`] }));
+    throw j.fehler || [`Fehler ${r.status}`];
+  }
+  return r;
+}
+
+$("standort").addEventListener("change", () => { plaetze(); rechne(); });
+$("kautionBetrag").addEventListener("input", () => { kautionManuell = true; rechne(); });
+f.addEventListener("input", () => { rechne(); if (!$("fErr").classList.contains("hidden")) zeigeFehler(lokalePruefung(daten())); });
+f.addEventListener("change", rechne);
+
+$("vorschau").addEventListener("click", async () => {
+  const d = daten();
+  const e = lokalePruefung(d);
+  zeigeFehler(e);
+  if (e.length) return;
+  const win = window.open("", "_blank");
+  try {
+    const r = await post("/api/admin/vorschau", d);
+    const url = URL.createObjectURL(await r.blob());
+    if (win) win.location = url; else location.href = url;
+  } catch (err) {
+    if (win) win.close();
+    zeigeFehler(err);
+  }
+});
+
+f.addEventListener("submit", async (ev) => {
+  ev.preventDefault();
+  const d = daten();
+  const e = lokalePruefung(d);
+  zeigeFehler(e);
+  if (e.length) return;
+  const gebuehrTxt = d.gebuehr === "mieter" ? "Der MIETER trägt die Vertragsgebühr." : "DU trägst die Vertragsgebühr.";
+  const kautionTxt = d.kaution === "ja" ? `Kaution: ${eur(Number(d.kautionBetrag))}.` : "KEINE Kaution.";
+  if (!confirm(`Bitte bestätigen:\n\n${gebuehrTxt}\n${kautionTxt}\n\nLink jetzt erzeugen?`)) return;
+  $("erzeugen").disabled = true;
+  try {
+    const j = await (await post("/api/admin/link", d)).json();
+    $("link").value = j.url;
+    const bis = new Date(j.gueltigBis).toLocaleDateString("de-AT");
+    $("gueltig").textContent = `Vertrags-ID ${j.id} · gültig bis ${bis}`;
+    const posten = j.summen.posten.map(([n, b]) => `${n} ${eur(b)}`).join(", ");
+    const betreff = `Dein Mietvertrag für den Stellplatz ${LABEL[d.standort]} Nr. ${d.platz}`;
+    const text =
+      `Hallo,\n\nhier ist der Link zu deinem Mietvertrag für den Stellplatz Nr. ${d.platz} (${LABEL[d.standort]}), Mietbeginn ${datumDE(d.beginn)}:\n\n${j.url}\n\n` +
+      `Trag dort deine Daten ein und unterschreib den Vertrag – online, ausgedruckt oder mit ID Austria. Der Link ist bis ${bis} gültig.\n\n` +
+      `Mit der ersten Monatsmiete sind ${eur(j.summen.gesamt)} fällig (${posten}). Die Bankverbindung steht im Vertrag.\n\n` +
+      `Beste Grüße\nPeter Stelzhammer\nparkeninnsbruck.com`;
+    const to = encodeURIComponent(d.email || "");
+    $("gmail").href = `https://mail.google.com/mail/?view=cm&fs=1&to=${to}&su=${encodeURIComponent(betreff)}&body=${encodeURIComponent(text)}`;
+    $("mailto").href = `mailto:${d.email || ""}?subject=${encodeURIComponent(betreff)}&body=${encodeURIComponent(text)}`;
+    $("textKopieren").onclick = () => navigator.clipboard.writeText(`${betreff}\n\n${text}`).then(() => ($("textKopieren").textContent = "Kopiert ✓"));
+    $("ergebnis").classList.remove("hidden");
+    $("ergebnis").scrollIntoView({ behavior: "smooth" });
+  } catch (err) {
+    zeigeFehler(err);
+  } finally {
+    $("erzeugen").disabled = false;
+  }
+});
+$("kopieren").addEventListener("click", () => navigator.clipboard.writeText($("link").value).then(() => ($("kopieren").textContent = "Kopiert ✓")));
+
+const ART = { online: "online unterschrieben", haendisch: "händisch, hochgeladen", idaustria: "ID Austria, hochgeladen" };
+async function liste() {
+  const el = $("liste");
+  try {
+    const r = await fetch("/api/admin/liste");
+    if (!r.ok) throw new Error((await r.json().catch(() => ({}))).fehler?.[0] || r.status);
+    const l = await r.json();
+    if (!l.length) { el.textContent = "Noch keine Einreichungen."; return; }
+    el.innerHTML = `<table class="list"><thead><tr><th>Eingang</th><th>Mieter / Platz</th><th>Art</th><th></th></tr></thead><tbody>${l
+      .map((o) => {
+        const id = o.key.split("/")[1];
+        const esc = (s) => String(s || "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+        return `<tr><td>${new Date(o.hochgeladen).toLocaleString("de-AT")}</td>
+          <td><b>${esc(o.mieter) || "–"}</b><br>${esc(o.standort)} ${esc(o.platz)} · ${id}</td>
+          <td>${ART[o.art] || esc(o.art)}</td>
+          <td style="white-space:nowrap"><a class="btn small" href="/api/admin/datei?key=${encodeURIComponent(o.key)}">Laden</a>
+          <button class="btn small" data-del="${esc(o.key)}">Löschen</button></td></tr>`;
+      })
+      .join("")}</tbody></table>`;
+  } catch (e) {
+    el.textContent = "Liste nicht verfügbar: " + e.message;
+  }
+}
+$("liste").addEventListener("click", async (ev) => {
+  const k = ev.target.dataset?.del;
+  if (!k || !confirm("Datei endgültig löschen?")) return;
+  await fetch("/api/admin/datei?key=" + encodeURIComponent(k), { method: "DELETE" });
+  liste();
+});
+$("neuLaden").addEventListener("click", liste);
+
+plaetze();
+$("beginn").value = ersterNaechsterMonat();
+rechne();
+liste();
+</script>
+</body>
+</html>

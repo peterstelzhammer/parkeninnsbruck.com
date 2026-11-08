@@ -1,0 +1,226 @@
+// Baut den Vertragstext als neutrale Blockstruktur (für PDF und HTML-Vorschau).
+import { STANDORTE } from "./config.js";
+
+const MONATE = ["Jänner", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
+
+export function euro(n) {
+  return "EUR " + n.toLocaleString("de-AT", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).replace(/ | /g, ".");
+}
+
+function datumLang(iso) {
+  const [y, m, d] = iso.split("-").map(Number);
+  return `${d}. ${MONATE[m - 1]} ${y}`;
+}
+
+function monatJahr(iso) {
+  const [y, m] = iso.split("-").map(Number);
+  return `${MONATE[m - 1]} ${y}`;
+}
+
+// 1 % von 36 Monatsmieten (unbefristeter Bestandvertrag: dreifacher Jahreswert)
+export function vertragsgebuehr(miete) {
+  return Math.round(miete * 36) / 100;
+}
+
+export function summen(k) {
+  const gebuehr = vertragsgebuehr(k.miete);
+  const posten = [["erste Monatsmiete", k.miete]];
+  if (k.gebuehrMieter) posten.push(["Vergebührung", gebuehr]);
+  if (k.kaution > 0) posten.push(["Kaution", k.kaution]);
+  const gesamt = Math.round(posten.reduce((s, [, b]) => s + b, 0) * 100) / 100;
+  return { gebuehr, posten, gesamt };
+}
+
+const LEER = "";
+
+// Prüft die Mieterangaben. Gibt { fehler, m } zurück.
+export function pruefeMieter(input) {
+  const e = [];
+  const t = (v, max = 120) => String(v ?? "").replace(/[\u0000-\u001f]/g, " ").trim().slice(0, max);
+  const m = {
+    name: t(input.name),
+    strasse: t(input.strasse),
+    plzOrt: t(input.plzOrt),
+    staat: t(input.staat || "Österreich", 60),
+    telefon: t(input.telefon, 40),
+    email: t(input.email, 120),
+    ort: t(input.ort || "Innsbruck", 60),
+    kennzeichen: (Array.isArray(input.kennzeichen) ? input.kennzeichen : [])
+      .map((k) => t(k, 15).toUpperCase())
+      .filter(Boolean)
+      .slice(0, 5),
+  };
+  if (m.name.length < 3) e.push("Name fehlt.");
+  if (m.strasse.length < 3) e.push("Straße fehlt.");
+  if (m.plzOrt.length < 4) e.push("PLZ / Ort fehlt.");
+  if (m.telefon.length < 6) e.push("Telefonnummer fehlt.");
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(m.email)) e.push("E-Mail-Adresse ungültig.");
+  if (m.kennzeichen.length < 1) e.push("Mindestens ein Kennzeichen angeben.");
+  return { fehler: e, m };
+}
+
+// k = Konditionen aus dem Token, m = Mieter (oder null für leere Vorlage), cfg = Konfiguration
+// sig = { datum, bild? } für die Unterschrift des Mieters (optional)
+export function baueVertrag(k, m, cfg, sig = null) {
+  const s = STANDORTE[k.standort];
+  const v = cfg.vermieter;
+  const mm = m || { name: LEER, strasse: LEER, plzOrt: LEER, staat: LEER, telefon: LEER, email: LEER, kennzeichen: [], ort: LEER };
+  const { gebuehr, posten, gesamt } = summen(k);
+  const B = [];
+  const p = (...runs) => B.push({ t: "p", runs: runs.map((r) => (typeof r === "string" ? { text: r } : r)) });
+  const b = (text) => ({ text, b: true });
+  const h = (text) => B.push({ t: "h", text });
+
+  B.push({ t: "title", text: "Mietvertrag über einen Kfz-Stellplatz" });
+  B.push({
+    t: "parties",
+    left: {
+      label: "Vermieter",
+      rows: [["Name", v.name], ["Straße", v.strasse], ["PLZ / Ort", v.plzOrt], ["Staat", v.staat], ["Telefon", v.telefon], ["E-Mail", v.email]],
+    },
+    right: {
+      label: "Mieter",
+      rows: [["Name", mm.name], ["Straße", mm.strasse], ["PLZ / Ort", mm.plzOrt], ["Staat", mm.staat], ["Telefon", mm.telefon], ["E-Mail", mm.email]],
+    },
+  });
+
+  h("Mietsache");
+  p("Der Vermieter vermietet dem Mieter zum Abstellen von Kraftfahrzeugen einen offenen, nicht absperrbaren Stellplatz in der Tiefgarage:");
+  p(b(`Adresse: ${s.adresse}, Stellplatz Nr. ${k.platz}`));
+  if (s.zusatz) p(s.zusatz);
+  const kz = mm.kennzeichen.length ? mm.kennzeichen.join(", ") : "____________________";
+  p(mm.kennzeichen.length > 1 ? "Kennzeichen der abgestellten Fahrzeuge: " : "Kennzeichen des abgestellten Fahrzeuges: ", b(kz));
+  p("Ein Wechsel des Fahrzeuges ist dem Vermieter unverzüglich bekanntzugeben.");
+
+  h("Mietzins");
+  p(
+    "Der monatliche Mietzins beträgt ",
+    b(`${euro(k.miete)} einschließlich Nebenkosten`),
+    ". Der Vermieter ist Kleinunternehmer gemäß § 6 Abs. 1 Z 27 UStG; der Mietzins enthält daher keine Umsatzsteuer. " +
+      `Es wird ${s.medium.nom} für die Tiefgarage zur Verfügung gestellt. Bei Verlust sind die tatsächlichen Kosten für ` +
+      `${s.medium.akk} lt. Hausverwaltung zu tragen. Bei Problemen mit ${s.medium.dat} steht ${s.stelle} ` +
+      `(${cfg.kontakte[k.standort]}) zur Verfügung.`
+  );
+  p("Die Miete ist monatlich spätestens am fünften Werktag eines jeden Monats im Voraus an den Vermieter zu entrichten.");
+
+  h("Vergebührung");
+  if (k.gebuehrMieter) {
+    p(
+      "Die Vermieterin/der Vermieter ist verpflichtet, die Gebühr selbst zu berechnen und an das Finanzamt für Gebühren, " +
+        "Verkehrsteuern und Glücksspiel abzuführen. Die Kosten der Vergebührung werden von der Vermieterin/dem Vermieter an den " +
+        "Mieter weiterverrechnet (",
+      b(euro(gebuehr)),
+      "); dieser Betrag ist mit der ersten Monatsmiete zu überweisen."
+    );
+  } else {
+    p(
+      "Die Vermieterin/der Vermieter ist verpflichtet, die Gebühr selbst zu berechnen und an das Finanzamt für Gebühren, " +
+        "Verkehrsteuern und Glücksspiel abzuführen. Die Kosten der Vergebührung trägt die Vermieterin/der Vermieter zur Gänze; " +
+        "sie werden dem Mieter nicht weiterverrechnet."
+    );
+  }
+
+  if (k.kaution > 0) {
+    h("Kaution");
+    p(
+      `Die Kaution beträgt ${euro(k.kaution)} und ist mit der ersten Monatsmiete zu überweisen. Sie wird nach Beendigung des ` +
+        `Mietverhältnisses und Rückgabe ${s.medium.gen} binnen 14 Tagen zurückbezahlt; der Vermieter ist berechtigt, offene ` +
+        "Forderungen aus dem Mietverhältnis mit der Kaution aufzurechnen."
+    );
+  }
+
+  h("Zahlung");
+  if (posten.length > 1) {
+    p(
+      "Mit der ersten Monatsmiete sind zu überweisen: " + posten.map(([n, betrag]) => `${n} ${euro(betrag)}`).join(" + ") + " = ",
+      b(euro(gesamt))
+    );
+  }
+  B.push({
+    t: "kv",
+    intro: "Die Zahlungen sind auf das folgende Konto zu überweisen:",
+    rows: [["Kontoinhaber", cfg.konto.inhaber], ["Kreditinstitut", cfg.konto.bank], ["IBAN", cfg.konto.iban], ["BIC", cfg.konto.bic]],
+  });
+
+  h("Mietzeit");
+  p(`Das Mietverhältnis beginnt am ${datumLang(k.beginn)}.`);
+
+  h("Kündigung des Mietverhältnisses");
+  p(
+    "Der Mietvertrag wird unbefristet abgeschlossen. Beide Parteien sind berechtigt, den Vertrag unter Einhaltung einer " +
+      "Kündigungsfrist von zwei Monaten zum Ende eines Kalendermonats schriftlich zu kündigen; eine Kündigung per E-Mail ist ausreichend."
+  );
+  p(
+    "Der Vermieter ist zur fristlosen Kündigung berechtigt, wenn der Mieter mit einem Betrag, der zwei Monatsmieten übersteigt, " +
+      "im Rückstand ist oder wenn der Mieter den Stellplatz vertragswidrig benutzt."
+  );
+
+  h("Wertsicherungsklausel");
+  p(
+    "Es wird ausdrücklich Wertbeständigkeit der Forderung plus Nebenforderung vereinbart. Als Maß zur Berechnung der " +
+      "Wertbeständigkeit dient der von der Statistik Austria monatlich verlautbarte Verbraucherpreisindex 2020 (Basisjahr 2020) " +
+      `oder ein an seine Stelle tretender Index. Als Bezugsgröße für diesen Vertrag dient die für den Monat ${monatJahr(k.beginn)} ` +
+      "verlautbarte Indexzahl. Schwankungen der Indexzahl nach oben oder unten bis ausschließlich 5 % bleiben unberücksichtigt. " +
+      "Dieser Spielraum ist bei jedem Überschreiten nach oben oder unten neu zu berechnen, wobei stets die erste außerhalb des " +
+      "jeweils geltenden Spielraums gelegene Indexzahl die Grundlage sowohl für die Neufestsetzung des Forderungsbetrages als auch " +
+      "für die Berechnung des neuen Spielraums zu bilden hat. Alle Veränderungsraten sind auf eine Dezimalstelle zu berechnen."
+  );
+
+  h("Benützung des Stellplatzes");
+  p(
+    "Eine andere als die vereinbarte Nutzung ist nicht gestattet. Der Mieter darf auf dem Stellplatz keine sonstigen Gegenstände " +
+      "lagern. Die Lagerung brennbarer oder explosiver Stoffe ist untersagt. Eine Ladestation für Elektrofahrzeuge ist nicht " +
+      "vorhanden; das Laden von Elektrofahrzeugen auf dem Stellplatz ist nicht gestattet. Die jeweils gültige Garagen- bzw. " +
+      "Hausordnung ist einzuhalten."
+  );
+
+  h("Untervermietung");
+  p("Eine Untervermietung oder sonstige Überlassung des Stellplatzes an Dritte ist ohne vorherige schriftliche Zustimmung des Vermieters nicht gestattet.");
+
+  h("Haftung");
+  p(
+    "Die Benützung des Mietgegenstandes sowie der Zufahrtswege erfolgt auf eigene Gefahr. Eine Bewachung oder Verwahrung des " +
+      "eingestellten Fahrzeuges ist nicht Gegenstand des Vertrages. Beschädigungen am Mietobjekt und am Einfahrtsbereich zum " +
+      "Mietobjekt gehen zu Lasten des Mieters, sofern sie vom Mieter oder von ihm zuzurechnenden Personen verursacht wurden."
+  );
+  p("Der Mieter haftet für Verunreinigungen durch Öl oder Benzin sowie für alle Schäden, die bei der Benutzung des Stellplatzes schuldhaft verursacht werden.");
+
+  h("Rückgabe");
+  p(
+    "Bei Beendigung des Mietverhältnisses ist der Stellplatz geräumt und gereinigt zurückzugeben. " +
+      `${s.medium.Nom} ist spätestens am letzten Tag des Mietverhältnisses an den Vermieter zu retournieren.`
+  );
+
+  h("Ausschluss");
+  p("Das Vertragsverhältnis unterliegt nicht den Bestimmungen des Mietrechtsgesetzes.");
+  p("Jede Änderung des Vertrages bedarf der Schriftform.");
+  p("Dieser Vertrag wird in zwei Ausfertigungen errichtet; jede Vertragspartei erhält eine Ausfertigung.");
+
+  B.push({
+    t: "sign",
+    left: { label: "Vermieter", name: v.name, ortDatum: "", bild: null },
+    right: {
+      label: "Mieter",
+      name: mm.name,
+      ortDatum: sig ? `${mm.ort}, ${sig.datum}` : "",
+      bild: sig?.bild || null,
+    },
+  });
+
+  if (sig) {
+    B.push({
+      t: "note",
+      text:
+        `Der Mieter hat diesen Vertrag am ${sig.zeitpunkt} über parkeninnsbruck.com elektronisch unterzeichnet ` +
+        `(einfache elektronische Signatur). Vertrags-ID ${k.id}, Prüfsumme der Vertragsdaten (SHA-256): ${sig.hash}.`,
+    });
+  }
+  return B;
+}
+
+// Kanonische Darstellung der Vertragsdaten für die Prüfsumme
+export async function vertragsHash(k, m) {
+  const data = new TextEncoder().encode(JSON.stringify({ k, m }));
+  const d = new Uint8Array(await crypto.subtle.digest("SHA-256", data));
+  return Array.from(d, (x) => x.toString(16).padStart(2, "0")).join("");
+}

@@ -1,0 +1,334 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<title>Mietvertrag Stellplatz | parkeninnsbruck.com</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/vertrag/vertrag.css">
+</head>
+<body>
+<header class="top"><div class="wrap">
+  <a class="brand" href="/"><span class="p">P</span>parkeninnsbruck.com</a>
+</div></header>
+
+<main><div class="wrap">
+  <div id="laden" class="card">Lade deinen Vertrag …</div>
+  <div id="ungueltig" class="card hidden"><h2>Link nicht gültig</h2><p id="ungueltigText"></p></div>
+
+  <div id="app" class="hidden">
+    <h1>Dein Mietvertrag</h1>
+    <p class="sub" id="titel"></p>
+
+    <section class="card">
+      <h2>Konditionen</h2>
+      <dl class="sum" id="kond"></dl>
+      <p class="small" style="margin:14px 0 0">Unbefristet, Kündigungsfrist zwei Monate zum Monatsende. Offener Stellplatz, keine Ladestation.</p>
+    </section>
+
+    <form id="daten" class="card" novalidate autocomplete="on">
+      <h2><span class="step">1</span>Deine Daten</h2>
+      <div class="row">
+        <div><label for="name">Vor- und Nachname</label><input type="text" id="name" name="name" autocomplete="name" required></div>
+      </div>
+      <div class="row two">
+        <div><label for="strasse">Straße und Hausnummer</label><input type="text" id="strasse" name="strasse" autocomplete="street-address" required></div>
+        <div><label for="plzOrt">PLZ / Ort</label><input type="text" id="plzOrt" name="plzOrt" placeholder="6020 Innsbruck" required></div>
+      </div>
+      <div class="row three">
+        <div><label for="staat">Staat</label><input type="text" id="staat" name="staat" value="Österreich" autocomplete="country-name"></div>
+        <div><label for="telefon">Telefon</label><input type="tel" id="telefon" name="telefon" autocomplete="tel" required></div>
+        <div><label for="email">E-Mail</label><input type="email" id="email" name="email" autocomplete="email" required></div>
+      </div>
+      <label>Kennzeichen <span class="hint">(bis zu 5 Fahrzeuge)</span></label>
+      <div id="kzListe"></div>
+      <button type="button" class="btn small" id="kzPlus">+ weiteres Kennzeichen</button>
+    </form>
+
+    <section class="card">
+      <h2><span class="step">2</span>Vertrag lesen</h2>
+      <p class="small">Deine Angaben werden beim Unterschreiben automatisch in den Vertrag übernommen.</p>
+      <div class="vertrag" id="vertrag"></div>
+    </section>
+
+    <section class="card" id="signCard">
+      <h2><span class="step">3</span>Unterschreiben</h2>
+      <div class="tabs" role="tablist">
+        <button type="button" role="tab" aria-selected="true" data-tab="online">Online<small>am Bildschirm</small></button>
+        <button type="button" role="tab" aria-selected="false" data-tab="papier">Auf Papier<small>drucken &amp; scannen</small></button>
+        <button type="button" role="tab" aria-selected="false" data-tab="idaustria">ID Austria<small>qualifiziert</small></button>
+      </div>
+
+      <div data-panel="online">
+        <p class="small" style="margin-top:0">Unterschreib mit Finger, Stift oder Maus im Feld.</p>
+        <canvas class="pad" id="pad"></canvas>
+        <div class="btns" style="margin:8px 0 0"><button type="button" class="btn small" id="padLeeren" style="flex:0 0 auto">Unterschrift löschen</button></div>
+        <div class="row" style="margin-top:14px"><div><label for="ort">Ort</label><input type="text" id="ort" name="ort" value="Innsbruck"></div></div>
+        <label class="check"><input type="checkbox" id="zustimmung"><span>Ich habe den Vertrag gelesen und schließe ihn mit meiner Unterschrift verbindlich ab.</span></label>
+        <div class="btns"><button type="button" class="btn primary" id="onlineSenden">Verbindlich unterschreiben</button></div>
+      </div>
+
+      <div data-panel="papier" class="hidden">
+        <ol class="howto">
+          <li>Vertrag als PDF herunterladen und ausdrucken.</li>
+          <li>Ort, Datum und Unterschrift beim Feld „Mieter“ eintragen.</li>
+          <li>Alle Seiten scannen oder gut lesbar fotografieren und hier hochladen.</li>
+        </ol>
+        <div class="btns"><button type="button" class="btn" data-pdf>1. PDF herunterladen</button></div>
+        <div class="row" style="margin-top:14px"><div><label for="dateiPapier">2. Unterschriebenen Vertrag hochladen <span class="hint">(PDF, JPG oder PNG, max. 15 MB)</span></label><input type="file" id="dateiPapier" accept="application/pdf,image/jpeg,image/png"></div></div>
+        <div class="btns"><button type="button" class="btn primary" data-upload="haendisch">Hochladen</button></div>
+      </div>
+
+      <div data-panel="idaustria" class="hidden">
+        <p class="small" style="margin-top:0">Die qualifizierte Signatur mit ID Austria ist der eigenhändigen Unterschrift rechtlich gleichgestellt und für Privatpersonen kostenlos.</p>
+        <ol class="howto">
+          <li>Vertrag als PDF herunterladen.</li>
+          <li>Auf <a href="https://www.a-trust.at/pdfsign" target="_blank" rel="noopener">a-trust.at/pdfsign</a> hochladen und mit deiner ID Austria signieren.</li>
+          <li>Das signierte PDF hier hochladen.</li>
+        </ol>
+        <div class="btns"><button type="button" class="btn" data-pdf>1. PDF herunterladen</button></div>
+        <div class="row" style="margin-top:14px"><div><label for="dateiId">2. Signiertes PDF hochladen</label><input type="file" id="dateiId" accept="application/pdf"></div></div>
+        <div class="btns"><button type="button" class="btn primary" data-upload="idaustria">Hochladen</button></div>
+      </div>
+
+      <div id="sErr" class="err hidden"></div>
+    </section>
+
+    <section class="card hidden" id="fertig">
+      <h2>Danke – dein Vertrag ist da</h2>
+      <div class="ok" id="fertigText"></div>
+      <p class="small">Du bekommst die gegengezeichnete Ausfertigung per E-Mail. Fragen: <a href="mailto:info@parkeninnsbruck.com">info@parkeninnsbruck.com</a></p>
+    </section>
+
+    <p class="small">Datenschutz: Deine Angaben werden nur für den Abschluss und die Abwicklung dieses Mietvertrags verwendet. Beim Unterschreiben speichern wir den Vertrag sowie Zeitpunkt und IP-Adresse als Nachweis. Kein Tracking, keine Cookies. Vertrags-ID <span id="vid"></span>.</p>
+  </div>
+</div></main>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const T = new URLSearchParams(location.search).get("t");
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const datumDE = (iso) => { const [y, m, d] = iso.split("-"); return `${+d}.${+m}.${y}`; };
+let info = null;
+
+function renderVertrag(blocks) {
+  return blocks.map((b) => {
+    if (b.t === "title") return `<h3 style="font-size:17px;margin-top:0">${esc(b.text)}</h3>`;
+    if (b.t === "h") return `<h3>${esc(b.text)}</h3>`;
+    if (b.t === "p") return `<p>${b.runs.map((r) => (r.b ? `<b>${esc(r.text)}</b>` : esc(r.text))).join("")}</p>`;
+    if (b.t === "kv") return `<p>${esc(b.intro || "")}</p><table>${b.rows.map(([k, v]) => `<tr><td>${esc(k)}</td><td>${esc(v)}</td></tr>`).join("")}</table>`;
+    if (b.t === "parties") {
+      const col = (s) => `<div><em>${esc(s.label)}</em><br>${s.rows.map(([k, v]) => `${esc(k)}: ${esc(v) || "…"}`).join("<br>")}</div>`;
+      return `<div class="parties">${col(b.left)}${col(b.right)}</div>`;
+    }
+    if (b.t === "sign") return `<p class="small" style="margin-top:14px">Unterschriften: Vermieter und Mieter</p>`;
+    return "";
+  }).join("");
+}
+
+function kzFeld(wert = "") {
+  const n = $("kzListe").children.length;
+  if (n >= 5) return;
+  const d = document.createElement("div");
+  d.className = "kz";
+  d.innerHTML = `<input type="text" name="kennzeichen" placeholder="z. B. I-123AB" maxlength="15" autocapitalize="characters" value="${esc(wert)}">` +
+    (n ? `<button type="button" class="btn small" aria-label="Kennzeichen entfernen">✕</button>` : "");
+  d.querySelector("button")?.addEventListener("click", () => { d.remove(); $("kzPlus").classList.remove("hidden"); });
+  $("kzListe").appendChild(d);
+  $("kzPlus").classList.toggle("hidden", $("kzListe").children.length >= 5);
+}
+$("kzPlus").addEventListener("click", () => kzFeld());
+
+function mieter() {
+  const f = new FormData($("daten"));
+  return {
+    name: f.get("name"), strasse: f.get("strasse"), plzOrt: f.get("plzOrt"), staat: f.get("staat"),
+    telefon: f.get("telefon"), email: f.get("email"), ort: $("ort").value,
+    kennzeichen: f.getAll("kennzeichen").map((s) => s.trim()).filter(Boolean),
+  };
+}
+function lokalePruefung(m) {
+  const e = [];
+  if ((m.name || "").trim().length < 3) e.push("Bitte deinen Namen angeben.");
+  if ((m.strasse || "").trim().length < 3) e.push("Bitte deine Straße angeben.");
+  if ((m.plzOrt || "").trim().length < 4) e.push("Bitte PLZ und Ort angeben.");
+  if ((m.telefon || "").trim().length < 6) e.push("Bitte deine Telefonnummer angeben.");
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((m.email || "").trim())) e.push("Bitte eine gültige E-Mail-Adresse angeben.");
+  if (!m.kennzeichen.length) e.push("Bitte mindestens ein Kennzeichen angeben.");
+  return e;
+}
+function fehler(list) {
+  $("sErr").innerHTML = (Array.isArray(list) ? list : [String(list)]).map((e) => `<div>${esc(e)}</div>`).join("");
+  $("sErr").classList.toggle("hidden", !list.length);
+  if (list.length) $("sErr").scrollIntoView({ behavior: "smooth", block: "center" });
+}
+async function fehlerAus(r) {
+  const j = await r.json().catch(() => ({}));
+  return j.fehler || [`Fehler ${r.status}`];
+}
+function speichere(blob, name) {
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 2000);
+}
+const dateinameAus = (r, fallback) => (r.headers.get("content-disposition") || "").match(/filename="([^"]+)"/)?.[1] || fallback;
+function fertig(text) {
+  $("signCard").classList.add("hidden");
+  $("daten").classList.add("hidden");
+  $("fertigText").textContent = text;
+  $("fertig").classList.remove("hidden");
+  $("fertig").scrollIntoView({ behavior: "smooth" });
+}
+
+// Tabs
+document.querySelectorAll("[data-tab]").forEach((b) =>
+  b.addEventListener("click", () => {
+    document.querySelectorAll("[data-tab]").forEach((x) => x.setAttribute("aria-selected", x === b));
+    document.querySelectorAll("[data-panel]").forEach((p) => p.classList.toggle("hidden", p.dataset.panel !== b.dataset.tab));
+    fehler([]);
+    if (b.dataset.tab === "online") pad.resize();
+  })
+);
+
+// Unterschriftsfeld
+const pad = (() => {
+  const c = $("pad");
+  const ctx = c.getContext("2d");
+  let leer = true, zeichnet = false, last = null;
+  function resize() {
+    const r = c.getBoundingClientRect();
+    if (!r.width) return;
+    const dpr = Math.max(window.devicePixelRatio || 1, 2);
+    c.width = r.width * dpr;
+    c.height = r.height * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.lineWidth = 2.4; ctx.lineCap = "round"; ctx.lineJoin = "round"; ctx.strokeStyle = "#0b2a4a";
+    leer = true;
+  }
+  const pos = (e) => { const r = c.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; };
+  c.addEventListener("pointerdown", (e) => { zeichnet = true; last = pos(e); c.setPointerCapture(e.pointerId); ctx.beginPath(); ctx.arc(last.x, last.y, 1.1, 0, 7); ctx.fillStyle = "#0b2a4a"; ctx.fill(); leer = false; });
+  c.addEventListener("pointermove", (e) => {
+    if (!zeichnet) return;
+    const p = pos(e);
+    ctx.beginPath(); ctx.moveTo(last.x, last.y); ctx.lineTo(p.x, p.y); ctx.stroke();
+    last = p; leer = false;
+  });
+  const ende = () => (zeichnet = false);
+  c.addEventListener("pointerup", ende); c.addEventListener("pointercancel", ende);
+  window.addEventListener("resize", () => { if (leer) resize(); });
+  // auf den beschriebenen Bereich zuschneiden, damit die Unterschrift im PDF groß genug ist
+  function png() {
+    const { width: w, height: h } = c;
+    const d = ctx.getImageData(0, 0, w, h).data;
+    let x0 = w, y0 = h, x1 = 0, y1 = 0;
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (d[(y * w + x) * 4 + 3] > 10) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+    const m = 12, cw = Math.min(w, x1 - x0 + 2 * m), ch = Math.min(h, y1 - y0 + 2 * m);
+    const o = document.createElement("canvas");
+    const sc = Math.min(1, 900 / cw);
+    o.width = Math.round(cw * sc); o.height = Math.round(ch * sc);
+    o.getContext("2d").drawImage(c, Math.max(0, x0 - m), Math.max(0, y0 - m), cw, ch, 0, 0, o.width, o.height);
+    return o.toDataURL("image/png");
+  }
+  return { resize, leer: () => leer, png, leeren: () => { ctx.clearRect(0, 0, c.width, c.height); leer = true; } };
+})();
+$("padLeeren").addEventListener("click", () => pad.leeren());
+
+$("onlineSenden").addEventListener("click", async () => {
+  const m = mieter();
+  const e = lokalePruefung(m);
+  if (pad.leer()) e.push("Bitte im Feld unterschreiben.");
+  if (!$("zustimmung").checked) e.push("Bitte bestätige, dass du den Vertrag gelesen hast.");
+  fehler(e);
+  if (e.length) return;
+  const btn = $("onlineSenden");
+  btn.disabled = true; btn.textContent = "Wird unterschrieben …";
+  try {
+    const r = await fetch("/api/vertrag/signieren", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ t: T, mieter: m, bild: pad.png(), zustimmung: true }) });
+    if (!r.ok) throw await fehlerAus(r);
+    speichere(await r.blob(), dateinameAus(r, "Mietvertrag.pdf"));
+    fertig("Du hast den Vertrag unterschrieben. Eine Kopie wurde gerade heruntergeladen.");
+  } catch (err) {
+    fehler(err);
+  } finally {
+    btn.disabled = false; btn.textContent = "Verbindlich unterschreiben";
+  }
+});
+
+document.querySelectorAll("[data-pdf]").forEach((b) =>
+  b.addEventListener("click", async () => {
+    const m = mieter();
+    const e = lokalePruefung(m);
+    fehler(e);
+    if (e.length) { $("daten").scrollIntoView({ behavior: "smooth" }); return; }
+    b.disabled = true;
+    try {
+      const r = await fetch("/api/vertrag/pdf", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ t: T, mieter: m }) });
+      if (!r.ok) throw await fehlerAus(r);
+      speichere(await r.blob(), dateinameAus(r, "Mietvertrag.pdf"));
+    } catch (err) {
+      fehler(err);
+    } finally {
+      b.disabled = false;
+    }
+  })
+);
+
+document.querySelectorAll("[data-upload]").forEach((b) =>
+  b.addEventListener("click", async () => {
+    const art = b.dataset.upload;
+    const input = art === "idaustria" ? $("dateiId") : $("dateiPapier");
+    const datei = input.files[0];
+    if (!datei) return fehler(["Bitte zuerst die Datei auswählen."]);
+    if (datei.size > 15 * 1024 * 1024) return fehler(["Die Datei ist zu groß (max. 15 MB)."]);
+    fehler([]);
+    const fd = new FormData();
+    fd.append("t", T); fd.append("art", art); fd.append("name", mieter().name || ""); fd.append("datei", datei);
+    b.disabled = true; b.textContent = "Wird hochgeladen …";
+    try {
+      const r = await fetch("/api/vertrag/upload", { method: "POST", body: fd });
+      if (!r.ok) throw await fehlerAus(r);
+      fertig("Dein unterschriebener Vertrag ist bei uns eingegangen.");
+    } catch (err) {
+      fehler(err);
+    } finally {
+      b.disabled = false; b.textContent = "Hochladen";
+    }
+  })
+);
+
+(async () => {
+  try {
+    if (!T) throw ["Dieser Link ist unvollständig. Bitte öffne den Link aus der E-Mail erneut."];
+    const r = await fetch("/api/vertrag/info?t=" + encodeURIComponent(T));
+    if (!r.ok) throw await fehlerAus(r);
+    info = await r.json();
+  } catch (err) {
+    $("laden").classList.add("hidden");
+    $("ungueltigText").textContent = (Array.isArray(err) ? err : [String(err)]).join(" ");
+    $("ungueltig").classList.remove("hidden");
+    return;
+  }
+  $("laden").classList.add("hidden");
+  $("app").classList.remove("hidden");
+  $("titel").textContent = `Stellplatz Nr. ${info.platz}, ${info.adresse} · Mietbeginn ${datumDE(info.beginn)}`;
+  $("kond").innerHTML = info.konditionen.map(([k, v], i, a) => `<dt>${esc(k)}</dt><dd${i === a.length - 1 ? ' class="total"' : ""}>${esc(v)}</dd>`).join("");
+  $("vertrag").innerHTML = renderVertrag(info.vertrag);
+  $("vid").textContent = info.id;
+  if (info.email) $("email").value = info.email;
+  if (info.eingereicht > 0) {
+    const h = document.createElement("div");
+    h.className = "ok";
+    h.textContent = "Für diesen Vertrag ist bereits ein unterschriebenes Dokument eingegangen. Du musst nichts weiter tun, außer du willst eine korrigierte Fassung schicken.";
+    $("app").insertBefore(h, $("app").children[2]);
+  }
+  kzFeld();
+  pad.resize();
+})();
+</script>
+</body>
+</html>
