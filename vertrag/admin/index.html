@@ -259,7 +259,8 @@ f.addEventListener("submit", async (ev) => {
       `2. Unterschreiben – direkt online am Bildschirm, oder den Vertrag als PDF herunterladen und ausgedruckt bzw. mit ID Austria unterschreiben.\n` +
       `3. Wenn du nicht online unterschreibst: den unterschriebenen Vertrag über denselben Link wieder hochladen oder per E-Mail an p.stelzhammer@gmail.com schicken.\n\n` +
       `Bei der Online-Unterschrift ist der Vertrag sofort bei mir, sonst mit dem Hochladen bzw. deiner E-Mail. Danach bekommst du die gegengezeichnete Ausfertigung. Der Link ist bis ${bis} gültig.\n\n` +
-      `${j.summen.miete.rueckwirkend ? "Bei Vertragsabschluss" : "Mit der ersten Miete"} sind ${eur(j.summen.gesamt)} fällig (${posten}). Die Bankverbindung steht im Vertrag.`;
+      `${j.summen.miete.rueckwirkend ? "Bei Vertragsabschluss" : "Mit der ersten Miete"} sind ${eur(j.summen.gesamt)} fällig (${posten}). Die Bankverbindung steht im Vertrag.\n\n` +
+      `Schöne Grüsse / Regards\nPeter Stelzhammer\n+43 (664) 16 11 444 | Rhombergstrasse 33 | 6067 Absam | Austria\np.stelzhammer@gmail.com`;
     const to = encodeURIComponent(d.email || "");
     $("gmail").href = `https://mail.google.com/mail/?view=cm&fs=1&to=${to}&su=${encodeURIComponent(betreff)}&body=${encodeURIComponent(text)}`;
     $("mailto").href = `mailto:${d.email || ""}?subject=${encodeURIComponent(betreff)}&body=${encodeURIComponent(text)}`;
