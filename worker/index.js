@@ -1,12 +1,17 @@
 // Worker für parkeninnsbruck.com: liefert die statische Website aus (ASSETS)
 // und stellt die API für den Online-Mietvertrag bereit.
-import { adminSchutz } from "./lib/http.js";
+import { adminSchutz, basicOk } from "./lib/http.js";
+import { sitzungsCookie, notfallGesperrt, notfallFehler } from "./lib/auth.js";
 import * as link from "./api/admin/link.js";
 import * as vorschau from "./api/admin/vorschau.js";
 import * as liste from "./api/admin/liste.js";
 import * as datei from "./api/admin/datei.js";
 import * as gegenzeichnen from "./api/admin/gegenzeichnen.js";
 import * as gegenzeichnungUpload from "./api/admin/gegenzeichnung-upload.js";
+import * as authCode from "./api/auth/code.js";
+import * as authPruefen from "./api/auth/pruefen.js";
+import * as authLogout from "./api/auth/logout.js";
+import * as archivieren from "./api/admin/archivieren.js";
 import * as offen from "./api/admin/offen.js";
 import * as gzLink from "./api/admin/gz-link.js";
 import * as gegenzeichnung from "./api/vertrag/gegenzeichnung.js";
@@ -24,6 +29,10 @@ const ROUTEN = {
   "/api/admin/gegenzeichnung-upload": gegenzeichnungUpload,
   "/api/admin/gz-link": gzLink,
   "/api/admin/offen": offen,
+  "/api/admin/archivieren": archivieren,
+  "/api/auth/code": authCode,
+  "/api/auth/pruefen": authPruefen,
+  "/api/auth/logout": authLogout,
   "/api/vertrag/gegenzeichnung": gegenzeichnung,
   "/api/vertrag/info": info,
   "/api/vertrag/pdf": pdf,
@@ -52,6 +61,18 @@ async function api(request, env, ctx, pfad) {
 export default {
   async fetch(request, env, ctx) {
     const pfad = new URL(request.url).pathname.replace(/\/+$/, "") || "/";
+    if (pfad === "/vertrag/admin/passwort") {
+      // Notfall-Zugang mit Passwort (Basic Auth), setzt anschließend die normale Sitzung
+      if (await notfallGesperrt(env)) {
+        return new Response("Zu viele Fehlversuche. Bitte in 15 Minuten erneut versuchen oder den E-Mail-Code verwenden.", { status: 429, headers: { "cache-control": "no-store" } });
+      }
+      if (!(await basicOk(request, env))) {
+        if (request.headers.get("authorization")) await notfallFehler(env, false); // nur echte Fehlversuche zählen
+        return new Response("Anmeldung erforderlich", { status: 401, headers: { "www-authenticate": 'Basic realm="parkeninnsbruck Admin", charset="UTF-8"', "cache-control": "no-store" } });
+      }
+      await notfallFehler(env, true);
+      return new Response(null, { status: 302, headers: { location: "/vertrag/admin/", "set-cookie": await sitzungsCookie(request, env), "cache-control": "no-store" } });
+    }
     if (pfad === "/vertrag/admin" || pfad.startsWith("/vertrag/admin/")) {
       return adminSchutz(request, env, () => env.ASSETS.fetch(request));
     }

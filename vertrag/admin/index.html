@@ -11,7 +11,7 @@
 <body>
 <header class="top"><div class="wrap">
   <a class="brand" href="/"><span class="p">P</span>parkeninnsbruck.com</a>
-  <span class="pill">Admin</span>
+  <span><button type="button" class="btn small" id="abmelden" style="margin-right:8px">Abmelden</button><span class="pill">Admin</span></span>
 </div></header>
 
 <main><div class="wrap">
@@ -153,9 +153,20 @@
     <p class="small">Online unterschriebene PDFs und hochgeladene Dokumente. Mit „Gegenzeichnen“ unterschreibst du direkt hier oder lädst ein gegengezeichnetes Dokument hoch; danach geht die E-Mail an den Mieter.</p>
     <div id="liste" class="small" style="overflow-x:auto">Lade …</div>
   </section>
+
+  <section class="card">
+    <details id="archivBox">
+      <summary style="cursor:pointer;font-weight:700;color:var(--navy)">Archiv <span id="nArchiv" class="pill" style="margin-left:6px">0</span></summary>
+      <p class="small">Abgeschlossene Verträge. Hier kann nichts versehentlich gelöscht werden; zum Löschen zuerst „Zurückholen“.</p>
+      <div id="archiv" class="small" style="overflow-x:auto"></div>
+    </details>
+  </section>
 </div></main>
 
 <script>
+// Abgelaufene Sitzung: zurück zur Anmeldung
+const _fetch = window.fetch;
+window.fetch = async (...a) => { const r = await _fetch(...a); if (r.status === 401) location.href = "/vertrag/login/"; return r; };
 const PLAETZE = { kaiserjaeger: ["111", "112", "113", "114"], innrain: ["31"] };
 const LABEL = { kaiserjaeger: "Kaiserjägergarage", innrain: "Tiefgarage Innrain" };
 const $ = (id) => document.getElementById(id);
@@ -328,24 +339,32 @@ async function liste() {
   try {
     const r = await fetch("/api/admin/liste");
     if (!r.ok) throw new Error((await r.json().catch(() => ({}))).fehler?.[0] || r.status);
-    const l = await r.json();
-    LISTE = l;
+    const alle = await r.json();
+    LISTE = alle;
     offenGz();
-    if (!l.length) { el.textContent = "Noch keine Einreichungen."; return; }
-    el.innerHTML = `<table class="list"><thead><tr><th>Eingang</th><th>Mieter / Platz</th><th>Art</th><th></th></tr></thead><tbody>${l
-      .map((o) => {
-        const id = o.key.split("/")[1];
-        const esc = (s) => String(s || "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-        return `<tr><td>${new Date(o.hochgeladen).toLocaleString("de-AT")}</td>
-          <td><b>${esc(o.mieter) || "–"}</b><br>${esc(o.standort)} ${esc(o.platz)} · ${id}</td>
-          <td>${ART[o.art] || esc(o.art)}</td>
-          <td style="white-space:nowrap"><a class="btn small" href="/api/admin/datei?key=${encodeURIComponent(o.key)}">Laden</a>
-          ${o.art === "gegengezeichnet"
-            ? `<button class="btn small primary" data-mail="${esc(o.key)}">Mail an Mieter</button>`
-            : `<button class="btn small primary" data-gz="${esc(o.key)}">Gegenzeichnen</button>`}
-          <button class="btn small" data-del="${esc(o.key)}">Löschen</button></td></tr>`;
-      })
-      .join("")}</tbody></table>`;
+    const esc = (s) => String(s || "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+    const tabelle = (l, istArchiv) =>
+      `<table class="list"><thead><tr><th>Eingang</th><th>Mieter / Platz</th><th>Art</th><th></th></tr></thead><tbody>${l
+        .map((o) => {
+          const id = o.key.split("/")[1];
+          const laden = `<a class="btn small" href="/api/admin/datei?key=${encodeURIComponent(o.key)}">Laden</a>`;
+          const aktion = istArchiv
+            ? `<button class="btn small" data-archiv="${id}" data-an="0">Zurückholen</button>`
+            : `${o.art === "gegengezeichnet"
+                ? `<button class="btn small primary" data-mail="${esc(o.key)}">Mail an Mieter</button> <button class="btn small" data-archiv="${id}" data-an="1">Ins Archiv</button>`
+                : `<button class="btn small primary" data-gz="${esc(o.key)}">Gegenzeichnen</button>`}
+               <button class="btn small" data-del="${esc(o.key)}">Löschen</button>`;
+          return `<tr><td>${dtz(o.hochgeladen)}</td>
+            <td><b>${esc(o.mieter) || "–"}</b><br>${esc(o.standort)} ${esc(o.platz)} · ${id}</td>
+            <td>${ART[o.art] || esc(o.art)}</td>
+            <td style="white-space:nowrap">${laden} ${aktion}</td></tr>`;
+        })
+        .join("")}</tbody></table>`;
+    const aktiv = alle.filter((o) => !o.archiviert);
+    const arch = alle.filter((o) => o.archiviert);
+    el.innerHTML = aktiv.length ? tabelle(aktiv, false) : "Keine offenen Einträge.";
+    $("nArchiv").textContent = new Set(arch.map((o) => o.key.split("/")[1])).size;
+    $("archiv").innerHTML = arch.length ? tabelle(arch, true) : "Noch nichts im Archiv.";
   } catch (e) {
     el.textContent = "Liste nicht verfügbar: " + e.message;
   }
@@ -359,6 +378,13 @@ $("liste").addEventListener("click", async (ev) => {
   const k = ev.target.dataset?.del;
   if (!k || !confirm("Datei endgültig löschen?")) return;
   await fetch("/api/admin/datei?key=" + encodeURIComponent(k), { method: "DELETE" });
+  liste();
+});
+document.addEventListener("click", async (ev) => {
+  const id = ev.target.dataset?.archiv;
+  if (!id) return;
+  ev.target.disabled = true;
+  await fetch("/api/admin/archivieren", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ id, archiv: ev.target.dataset.an === "1" }) });
   liste();
 });
 $("neuLaden").addEventListener("click", () => { liste(); offenMieter(); });
@@ -480,17 +506,18 @@ async function gzMail(key) {
 // ---------- Offene Verträge ----------
 const esc2 = (s) => String(s || "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const dt = (x) => new Date(x).toLocaleDateString("de-AT");
+const dtz = (x) => new Date(x).toLocaleString("de-AT", { day: "numeric", month: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" });
 function offenGz() {
   const ids = {};
   for (const o of LISTE) (ids[o.key.split("/")[1]] ||= []).push(o);
   const warten = Object.values(ids)
-    .filter((g) => !g.some((o) => o.art === "gegengezeichnet"))
+    .filter((g) => !g.some((o) => o.art === "gegengezeichnet" || o.archiviert))
     .map((g) => g.find((o) => o.art === "online") || g[0])
     .sort((a, b) => (a.hochgeladen < b.hochgeladen ? 1 : -1));
   $("nGz").textContent = warten.length;
   $("offenGz").innerHTML = warten.length
     ? `<table class="list"><thead><tr><th>Eingang</th><th>Mieter / Platz</th><th>Art</th><th></th></tr></thead><tbody>${warten
-        .map((o) => `<tr><td>${new Date(o.hochgeladen).toLocaleString("de-AT")}</td><td><b>${esc2(o.mieter) || "–"}</b><br>${esc2(o.standort)} ${esc2(o.platz)}</td><td>${ART[o.art] || esc2(o.art)}</td><td style="white-space:nowrap"><button class="btn small primary" data-gz="${esc2(o.key)}">Gegenzeichnen</button></td></tr>`)
+        .map((o) => `<tr><td>${dtz(o.hochgeladen)}</td><td><b>${esc2(o.mieter) || "–"}</b><br>${esc2(o.standort)} ${esc2(o.platz)}</td><td>${ART[o.art] || esc2(o.art)}</td><td style="white-space:nowrap"><button class="btn small primary" data-gz="${esc2(o.key)}">Gegenzeichnen</button></td></tr>`)
         .join("")}</tbody></table>`
     : "Nichts offen.";
 }
@@ -502,7 +529,7 @@ async function offenMieter() {
     $("nMieter").textContent = l.length;
     $("offenMieter").innerHTML = l.length
       ? `<table class="list"><thead><tr><th>Erzeugt</th><th>Mieter / Platz</th><th>Gültig bis</th><th></th></tr></thead><tbody>${l
-          .map((o) => `<tr><td>${dt(o.erstellt)}</td><td><b>${esc2(o.vorname) || esc2(o.email) || "–"}</b><br>${esc2(o.standort)} ${esc2(o.platz)} · Beginn ${dt(o.beginn)}</td><td>${o.abgelaufen ? "<b>abgelaufen</b>" : dt(Number(o.exp))}</td><td><button class="btn small" data-offendel="${esc2(o.id)}">Entfernen</button></td></tr>`)
+          .map((o) => `<tr><td>${dtz(o.erstellt)}</td><td><b>${esc2(o.vorname) || esc2(o.email) || "–"}</b><br>${esc2(o.standort)} ${esc2(o.platz)} · Beginn ${dt(o.beginn)}</td><td>${o.abgelaufen ? "<b>abgelaufen</b>" : dt(Number(o.exp))}</td><td><button class="btn small" data-offendel="${esc2(o.id)}">Entfernen</button></td></tr>`)
           .join("")}</tbody></table>`
       : "Nichts offen.";
   } catch (e) {
@@ -517,6 +544,8 @@ document.addEventListener("click", async (ev) => {
     offenMieter();
   }
 });
+
+$("abmelden").addEventListener("click", async () => { await fetch("/api/auth/logout", { method: "POST" }); location.href = "/"; });
 
 plaetze();
 $("beginn").value = ersterNaechsterMonat();

@@ -11,7 +11,14 @@ export async function onRequestGet({ env }) {
     cursor = l.truncated ? l.cursor : undefined;
   } while (cursor);
   objekte.sort((a, b) => (a.uploaded < b.uploaded ? 1 : -1));
+  const archiv = new Set();
+  let c2;
+  do {
+    const l = await env.VERTRAEGE.list({ prefix: "archiv/", cursor: c2 });
+    l.objects.forEach((o) => archiv.add(o.key.split("/")[1]));
+    c2 = l.truncated ? l.cursor : undefined;
+  } while (c2);
   return json(
-    objekte.map((o) => ({ key: o.key, groesse: o.size, hochgeladen: o.uploaded, ...(o.customMetadata || {}) }))
+    objekte.map((o) => ({ key: o.key, groesse: o.size, hochgeladen: o.uploaded, archiviert: archiv.has(o.key.split("/")[1]), ...(o.customMetadata || {}) }))
   );
 }

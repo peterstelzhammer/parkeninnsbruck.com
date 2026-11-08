@@ -1,5 +1,6 @@
 // Gemeinsame Helfer für die API-Endpunkte.
 import { loadConfig, MAX_EINREICHUNGEN } from "./config.js";
+import { sitzungOk } from "./auth.js";
 
 export const json = (data, status = 200) =>
   new Response(JSON.stringify(data), {
@@ -19,25 +20,11 @@ export const pdfAntwort = (bytes, dateiname, inline = false) =>
     },
   });
 
-// Basic Auth für den Admin-Bereich (Benutzer: admin, Passwort: Secret ADMIN_PASSWORD)
+// Zugang zum Admin-Bereich: Sitzungs-Cookie (nach Anmeldung per E-Mail-Code, siehe lib/auth.js)
 export async function adminSchutz(request, env, next) {
-  const pw = env.ADMIN_PASSWORD;
-  if (!pw || pw.length < 12) return new Response("ADMIN_PASSWORD ist nicht (ausreichend lang) gesetzt.", { status: 503 });
-  const h = request.headers.get("authorization") || "";
-  let ok = false;
-  if (h.startsWith("Basic ")) {
-    try {
-      const [u, ...rest] = atob(h.slice(6)).split(":");
-      ok = await gleich(`${u}:${rest.join(":")}`, `admin:${pw}`);
-    } catch {
-      ok = false;
-    }
-  }
-  if (!ok) {
-    return new Response("Anmeldung erforderlich", {
-      status: 401,
-      headers: { "www-authenticate": 'Basic realm="parkeninnsbruck Admin", charset="UTF-8"', "cache-control": "no-store" },
-    });
+  if (!(await sitzungOk(request, env))) {
+    if (new URL(request.url).pathname.startsWith("/api/")) return fehler("Bitte anmelden.", 401);
+    return new Response(null, { status: 302, headers: { location: "/vertrag/login/", "cache-control": "no-store" } });
   }
   const res = await next();
   const out = new Response(res.body, res);
@@ -46,8 +33,22 @@ export async function adminSchutz(request, env, next) {
   return out;
 }
 
+// Notfall-Zugang: Basic Auth (Benutzer admin, Passwort = Secret ADMIN_PASSWORD)
+export async function basicOk(request, env) {
+  const pw = env.ADMIN_PASSWORD;
+  if (!pw || pw.length < 12) return false;
+  const h = request.headers.get("authorization") || "";
+  if (!h.startsWith("Basic ")) return false;
+  try {
+    const [u, ...rest] = atob(h.slice(6)).split(":");
+    return await gleich(`${u}:${rest.join(":")}`, `admin:${pw}`);
+  } catch {
+    return false;
+  }
+}
+
 // Vergleich über Hashes, damit die Laufzeit nicht vom Inhalt abhängt
-async function gleich(a, b) {
+export async function gleich(a, b) {
   const e = new TextEncoder();
   const [x, y] = await Promise.all([crypto.subtle.digest("SHA-256", e.encode(a)), crypto.subtle.digest("SHA-256", e.encode(b))]);
   const A = new Uint8Array(x);

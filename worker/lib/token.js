@@ -90,3 +90,11 @@ export async function erstelleDownloadToken(key, secret, tage = 180) {
   const sig = new Uint8Array(await crypto.subtle.sign("HMAC", await hmacKey(secret), enc.encode(body)));
   return { token: `${body}.${b64url(sig)}`, exp };
 }
+
+// Sitzungstoken für den Admin-Bereich (Typ "adm")
+export async function erstelleSitzung(secret, stunden) {
+  const exp = Math.floor(Date.now() / 1000) + stunden * 3600;
+  const body = b64url(enc.encode(JSON.stringify({ v: 1, typ: "adm", exp })));
+  const sig = new Uint8Array(await crypto.subtle.sign("HMAC", await hmacKey(secret), enc.encode(body)));
+  return { token: `${body}.${b64url(sig)}`, exp };
+}

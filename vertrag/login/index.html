@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Anmeldung | Admin</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/vertrag/vertrag.css">
+</head>
+<body>
+<header class="top"><div class="wrap">
+  <a class="brand" href="/"><span class="p">P</span>parkeninnsbruck.com</a>
+  <span class="pill">Admin</span>
+</div></header>
+<main><div class="wrap" style="max-width:480px">
+  <h1>Anmelden</h1>
+  <p class="sub">Du bekommst einen Einmalcode per E-Mail.</p>
+
+  <form id="f1" class="card" novalidate>
+    <label for="email">E-Mail-Adresse</label>
+    <input type="email" id="email" autocomplete="email" inputmode="email" required>
+    <div class="btns"><button type="submit" class="btn primary" id="b1">Code senden</button></div>
+  </form>
+
+  <form id="f2" class="card hidden" novalidate>
+    <p class="small" style="margin-top:0">Wir haben einen 6-stelligen Code gesendet (10 Minuten gültig). Schau auch im Spam-Ordner nach.</p>
+    <label for="code">Code</label>
+    <input type="text" id="code" inputmode="numeric" autocomplete="one-time-code" maxlength="8" placeholder="123456" required>
+    <div class="btns"><button type="submit" class="btn primary" id="b2">Anmelden</button></div>
+    <p class="small"><a href="#" id="neu">Neuen Code anfordern</a></p>
+  </form>
+
+  <div id="err" class="err hidden" role="alert"></div>
+  <p class="small"><a href="/vertrag/admin/passwort">Notfall: mit Passwort anmelden</a></p>
+</div></main>
+<script>
+const $ = (id) => document.getElementById(id);
+const fehler = (t) => { $("err").textContent = t || ""; $("err").classList.toggle("hidden", !t); };
+async function post(url, body) {
+  const r = await fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.fehler?.[0] || "Fehler " + r.status);
+  return j;
+}
+$("f1").addEventListener("submit", async (e) => {
+  e.preventDefault(); fehler("");
+  const email = $("email").value.trim();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return fehler("Bitte eine gültige E-Mail-Adresse eingeben.");
+  $("b1").disabled = true;
+  try {
+    await post("/api/auth/code", { email });
+    $("f1").classList.add("hidden"); $("f2").classList.remove("hidden"); $("code").focus();
+  } catch (err) { fehler(err.message); } finally { $("b1").disabled = false; }
+});
+$("f2").addEventListener("submit", async (e) => {
+  e.preventDefault(); fehler("");
+  $("b2").disabled = true;
+  try {
+    await post("/api/auth/pruefen", { email: $("email").value.trim(), code: $("code").value });
+    location.href = "/vertrag/admin/";
+  } catch (err) { fehler(err.message); $("b2").disabled = false; }
+});
+$("neu").addEventListener("click", (e) => { e.preventDefault(); fehler(""); $("code").value = ""; $("f2").classList.add("hidden"); $("f1").classList.remove("hidden"); });
+</script>
+</body>
+</html>
