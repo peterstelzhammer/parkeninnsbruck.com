@@ -74,10 +74,11 @@
         <ol class="howto">
           <li>Vertrag als PDF herunterladen und ausdrucken.</li>
           <li>Ort, Datum und Unterschrift beim Feld „Mieter“ eintragen.</li>
-          <li>Alle Seiten scannen oder gut lesbar fotografieren und hier hochladen.</li>
+          <li>Alle Seiten scannen oder gut lesbar fotografieren und <b>hier auf dieser Seite hochladen</b>.</li>
         </ol>
         <div class="btns"><button type="button" class="btn" data-pdf>1. PDF herunterladen</button></div>
-        <div class="row" style="margin-top:14px"><div><label for="dateiPapier">2. Unterschriebenen Vertrag hochladen <span class="hint">(PDF, JPG oder PNG, max. 15 MB)</span></label><input type="file" id="dateiPapier" accept="application/pdf,image/jpeg,image/png"></div></div>
+        <div class="ok" style="margin:14px 0 0">Wichtig: Der Vertrag ist erst bei uns, wenn du ihn <b>hier auf dieser Seite hochlädst</b> oder an die E-Mail-Adresse aus unserer Nachricht schickst. Du kannst diese Seite später über denselben Link wieder öffnen.</div>
+        <div class="row" style="margin-top:14px"><div><label for="dateiPapier">2. Unterschriebenen Vertrag hier hochladen <span class="hint">(PDF, JPG oder PNG, max. 15 MB)</span></label><input type="file" id="dateiPapier" accept="application/pdf,image/jpeg,image/png"></div></div>
         <div class="btns"><button type="button" class="btn primary" data-upload="haendisch">Hochladen</button></div>
       </div>
 
@@ -86,10 +87,11 @@
         <ol class="howto">
           <li>Vertrag als PDF herunterladen.</li>
           <li>Auf <a href="https://www.a-trust.at/pdfsign" target="_blank" rel="noopener">a-trust.at/pdfsign</a> hochladen und mit deiner ID Austria signieren.</li>
-          <li>Das signierte PDF hier hochladen.</li>
+          <li>Das signierte PDF <b>hier auf dieser Seite hochladen</b>.</li>
         </ol>
         <div class="btns"><button type="button" class="btn" data-pdf>1. PDF herunterladen</button></div>
-        <div class="row" style="margin-top:14px"><div><label for="dateiId">2. Signiertes PDF hochladen</label><input type="file" id="dateiId" accept="application/pdf"></div></div>
+        <div class="ok" style="margin:14px 0 0">Wichtig: Der Vertrag ist erst bei uns, wenn du ihn <b>hier auf dieser Seite hochlädst</b> oder an die E-Mail-Adresse aus unserer Nachricht schickst. Du kannst diese Seite später über denselben Link wieder öffnen.</div>
+        <div class="row" style="margin-top:14px"><div><label for="dateiId">2. Signiertes PDF hier hochladen</label><input type="file" id="dateiId" accept="application/pdf"></div></div>
         <div class="btns"><button type="button" class="btn primary" data-upload="idaustria">Hochladen</button></div>
       </div>
 
@@ -99,7 +101,7 @@
     <section class="card hidden" id="fertig">
       <h2>Danke – dein Vertrag ist da</h2>
       <div class="ok" id="fertigText"></div>
-      <p class="small">Du bekommst die gegengezeichnete Ausfertigung per E-Mail. Fragen: <a href="mailto:info@parkeninnsbruck.com">info@parkeninnsbruck.com</a></p>
+      <p class="small">Du musst nichts weiter tun. Die gegengezeichnete Ausfertigung bekommst du per E-Mail. Fragen: <a href="mailto:info@parkeninnsbruck.com">info@parkeninnsbruck.com</a></p>
     </section>
 
     <p class="small">Datenschutz: Deine Angaben werden nur für den Abschluss und die Abwicklung dieses Mietvertrags verwendet. Beim Unterschreiben speichern wir den Vertrag sowie Zeitpunkt und IP-Adresse als Nachweis. Kein Tracking, keine Cookies. Vertrags-ID <span id="vid"></span>.</p>
@@ -272,6 +274,7 @@ document.querySelectorAll("[data-pdf]").forEach((b) =>
       const r = await fetch("/api/vertrag/pdf", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ t: T, mieter: m }) });
       if (!r.ok) throw await fehlerAus(r);
       speichere(await r.blob(), dateinameAus(r, "Mietvertrag.pdf"));
+      b.textContent = "✓ PDF heruntergeladen – jetzt unterschreiben und unten hochladen";
     } catch (err) {
       fehler(err);
     } finally {

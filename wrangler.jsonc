@@ -12,6 +12,8 @@
   "r2_buckets": [
     { "binding": "VERTRAEGE", "bucket_name": "parkeninnsbruck-vertraege" }
   ],
+  // Benachrichtigung bei neuen Verträgen; Empfänger = "benachrichtigung" in VERTRAG_CONFIG (in Email Routing verifiziert)
+  "send_email": [{ "name": "MAIL" }],
   "observability": { "enabled": true }
   // Secrets (im Dashboard oder per `wrangler secret put`): ADMIN_PASSWORD, TOKEN_SECRET, VERTRAG_CONFIG
 }

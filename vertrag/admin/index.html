@@ -64,7 +64,11 @@
     </div>
 
     <h2 style="margin-top:22px"><span class="step">4</span>Mieter <span class="hint">(optional)</span></h2>
-    <div class="row">
+    <div class="row two">
+      <div>
+        <label for="vorname">Vorname des Mieters</label>
+        <input type="text" id="vorname" name="vorname" placeholder="für die Anrede" autocomplete="off">
+      </div>
       <div>
         <label for="email">E-Mail-Adresse des Mieters</label>
         <input type="email" id="email" name="email" placeholder="für den Versand der E-Mail">
@@ -212,15 +216,18 @@ f.addEventListener("submit", async (ev) => {
   try {
     const j = await (await post("/api/admin/link", d)).json();
     $("link").value = j.url;
-    const bis = new Date(j.gueltigBis).toLocaleDateString("de-AT");
+    const bis = datumDE(new Date(j.gueltigBis).toLocaleDateString("sv-SE", { timeZone: "Europe/Vienna" }));
     $("gueltig").textContent = `Vertrags-ID ${j.id} · gültig bis ${bis}`;
     const posten = j.summen.posten.map(([n, b]) => `${n} ${eur(b)}`).join(", ");
     const betreff = `Dein Mietvertrag für den Stellplatz ${LABEL[d.standort]} Nr. ${d.platz}`;
     const text =
-      `Hallo,\n\nhier ist der Link zu deinem Mietvertrag für den Stellplatz Nr. ${d.platz} (${LABEL[d.standort]}), Mietbeginn ${datumDE(d.beginn)}:\n\n${j.url}\n\n` +
-      `Trag dort deine Daten ein und unterschreib den Vertrag – online, ausgedruckt oder mit ID Austria. Der Link ist bis ${bis} gültig.\n\n` +
-      `${j.summen.miete.rueckwirkend ? "Bei Vertragsabschluss" : "Mit der ersten Miete"} sind ${eur(j.summen.gesamt)} fällig (${posten}). Die Bankverbindung steht im Vertrag.\n\n` +
-      `Beste Grüße\nPeter Stelzhammer\nparkeninnsbruck.com`;
+      `Hallo${(d.vorname || "").trim() ? " " + d.vorname.trim() : ""},\n\nhier ist der Link zu deinem Mietvertrag für den Stellplatz Nr. ${d.platz} (${LABEL[d.standort]}), Mietbeginn ${datumDE(d.beginn)}:\n\n${j.url}\n\n` +
+      `So funktioniert es:\n` +
+      `1. Link öffnen und deine Daten eintragen.\n` +
+      `2. Unterschreiben – direkt online am Bildschirm, oder den Vertrag als PDF herunterladen und ausgedruckt bzw. mit ID Austria unterschreiben.\n` +
+      `3. Wenn du nicht online unterschreibst: den unterschriebenen Vertrag über denselben Link wieder hochladen oder per E-Mail an p.stelzhammer@gmail.com schicken.\n\n` +
+      `Bei der Online-Unterschrift ist der Vertrag sofort bei mir, sonst mit dem Hochladen bzw. deiner E-Mail. Danach bekommst du die gegengezeichnete Ausfertigung. Der Link ist bis ${bis} gültig.\n\n` +
+      `${j.summen.miete.rueckwirkend ? "Bei Vertragsabschluss" : "Mit der ersten Miete"} sind ${eur(j.summen.gesamt)} fällig (${posten}). Die Bankverbindung steht im Vertrag.`;
     const to = encodeURIComponent(d.email || "");
     $("gmail").href = `https://mail.google.com/mail/?view=cm&fs=1&to=${to}&su=${encodeURIComponent(betreff)}&body=${encodeURIComponent(text)}`;
     $("mailto").href = `mailto:${d.email || ""}?subject=${encodeURIComponent(betreff)}&body=${encodeURIComponent(text)}`;
